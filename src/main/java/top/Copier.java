@@ -3,11 +3,10 @@ package top;
 import java.util.List;
 
 import org.junit.Test;
-import org.ndexbio.model.object.Network;
+import org.ndexbio.model.object.network.Network;
 import org.ndexbio.model.tools.ObjectModelTools;
-import org.ndexbio.rest.NdexRestClient;
-import org.ndexbio.rest.NdexRestClientModelAccessLayer;
-import org.ndexbio.rest.NdexRestClientUtilities;
+import org.ndexbio.rest.client.NdexRestClient;
+import org.ndexbio.rest.client.NdexRestClientModelAccessLayer;
 
 import com.fasterxml.jackson.databind.JsonNode;
 
@@ -48,11 +47,11 @@ public class Copier {
             
             Network network = networks.get(0);
             
-			String route = "/networks/" + network.getId() + "/edges/" + 0 + "/" + 10; 
+			String route = "/networks/" + network.getExternalId() + "/edges/" + 0 + "/" + 10; 
 			JsonNode result = client.get(route, "");
 			System.out.println("Network as JSON: " + result.get("name").asText());
 			
-			Network currentSubnetwork = mal.getEdges(network.getId(), 0, 10);
+			Network currentSubnetwork = mal.getEdges(network.getExternalId().toString(), 0, 10);
 			System.out.println("Network as Object Model: " + currentSubnetwork.getName());
 			
 		} catch (Exception e) {
@@ -68,28 +67,28 @@ public class Copier {
     	
     	// Get the first block of edges from the source network
     	System.out.println("Getting " + edgesPerBlock + " at offset " + skipBlocks);
-    	currentSubnetwork = mal.getEdges(network.getId(), skipBlocks, edgesPerBlock);
+    	currentSubnetwork = mal.getEdges(network.getExternalId().toString(), skipBlocks, edgesPerBlock);
     	
     	currentSubnetwork.setName(currentSubnetwork.getName() + " - copy " + Math.random());
     	currentSubnetwork.setMembers(null);
     	
-    	ObjectModelTools.summarizeNetwork(currentSubnetwork);
+    	//ObjectModelTools.summarizeNetwork(currentSubnetwork);
     	
     	// Create the target network
     	System.out.println("Creating network with " + currentSubnetwork.getEdgeCount()  + " edges");
     	Network targetNetwork = mal.createNetwork(currentSubnetwork);
 
-    	String targetNetworkId = targetNetwork.getId();
+    	String targetNetworkId = targetNetwork.getExternalId().toString();
     	
  
     	// Loop getting subnetworks by edges until the returned subnetwork has no edges
     	do { 
     		skipBlocks++;
     		System.out.println("Getting " + edgesPerBlock + " at offset " + skipBlocks);
-    		currentSubnetwork = mal.getEdges(network.getId(), skipBlocks, edgesPerBlock);
+    		currentSubnetwork = mal.getEdges(network.getExternalId().toString(), skipBlocks, edgesPerBlock);
     		// Add the subnetwork to the target
     		System.out.println("Adding " + currentSubnetwork.getEdgeCount()  + " edges to network " + targetNetworkId);
-    		ObjectModelTools.summarizeNetwork(currentSubnetwork);
+    		//ObjectModelTools.summarizeNetwork(currentSubnetwork);
     		if (currentSubnetwork.getEdgeCount() > 0) 
     			mal.addNetwork(targetNetworkId, "JDEX_ID", currentSubnetwork);
     	} while (currentSubnetwork.getEdgeCount() > 0);
@@ -99,10 +98,10 @@ public class Copier {
     	do { 
     		skipBlocks++;
     		System.out.println("Getting " + nodesPerBlock + " at offset " + skipBlocks);
-    		currentSubnetwork = mal.getNetworkByNonEdgeNodes(network.getId(), skipBlocks, nodesPerBlock);
+    		currentSubnetwork = mal.getNetworkByNonEdgeNodes(network.getExternalId().toString(), skipBlocks, nodesPerBlock);
     		// Add the subnetwork to the target
     		System.out.println("Adding " + currentSubnetwork.getNodeCount()  + " nodes to network " + targetNetworkId);
-    		ObjectModelTools.summarizeNetwork(currentSubnetwork);
+    		//ObjectModelTools.summarizeNetwork(currentSubnetwork);
     		if (currentSubnetwork.getNodeCount() > 0) 
     			mal.addNetwork(targetNetworkId, "JDEX_ID", currentSubnetwork);
     	} while (currentSubnetwork.getNodeCount() > 0);
