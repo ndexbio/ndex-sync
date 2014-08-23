@@ -1,12 +1,5 @@
 package top;
 
-import java.io.InputStream;
-import java.net.HttpURLConnection;
-
-
-
-import com.fasterxml.jackson.databind.JsonNode;
-
 
 public class CommandProcessor {
 	
@@ -24,8 +17,7 @@ public class CommandProcessor {
 		CommandProcessor cp = new CommandProcessor();
 		Copier copier = new Copier();
 		try {
-			copier.testGet();
-			copier.testCopyBELNetworkInBlocks();
+			copier.runPlans();
 		} catch (IllegalArgumentException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
@@ -33,30 +25,7 @@ public class CommandProcessor {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-		//cp.readSyncFiles();
-		//cp.processTasks();
 
 	}
-	
-	private void readSyncFiles(){
-		try {
-			//printTermsInNetworkByNamespace();
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-	
-	private void processTasks(){
-		try {
-			//printTermsInNetworkByNamespace();
-		} catch (Exception e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-	}
-	
-
-	
 
 }

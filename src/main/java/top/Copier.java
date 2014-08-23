@@ -1,21 +1,49 @@
 package top;
 
+import java.util.ArrayList;
 import java.util.List;
 
-import org.junit.Test;
-import org.ndexbio.model.object.network.Network;
-import org.ndexbio.model.tools.ObjectModelTools;
 import org.ndexbio.rest.client.NdexRestClient;
 import org.ndexbio.rest.client.NdexRestClientModelAccessLayer;
-
-import com.fasterxml.jackson.databind.JsonNode;
 
 
 public class Copier {
 	private static NdexRestClient client = new NdexRestClient("dexterpratt", "insecure");
-    private static NdexRestClientModelAccessLayer mal = new NdexRestClientModelAccessLayer(client);
+    private static NdexRestClientModelAccessLayer ndex = new NdexRestClientModelAccessLayer(client);
 
-  
+    private List<CopyPlan> plans = new ArrayList<CopyPlan>();
+    
+    public void runPlans(){
+    	readCopyPlans();
+    	processCopyPlans();
+    	
+    }
+    
+    
+    // Read plans from ndex-copy-plans directory
+	private void readCopyPlans(){
+		try {
+			// 
+		} catch (Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	// 
+	private void processCopyPlans(){
+		for (CopyPlan plan : this.plans){
+			try {
+			
+				plan.process();
+				
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+			e.printStackTrace();
+			}
+		}	
+	}
+    /*
     public void testCopyBELNetworkInBlocks() throws IllegalArgumentException, Exception
     {
     	int edgesPerBlock = 100;
@@ -107,5 +135,7 @@ public class Copier {
     	} while (currentSubnetwork.getNodeCount() > 0);
     			
     }
+*/
+
 
 }
