@@ -3,38 +3,52 @@ package top;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.ndexbio.rest.client.NdexRestClient;
-import org.ndexbio.rest.client.NdexRestClientModelAccessLayer;
-
-
 public class Copier {
-	private static NdexRestClient client = new NdexRestClient("dexterpratt", "insecure");
-    private static NdexRestClientModelAccessLayer ndex = new NdexRestClientModelAccessLayer(client);
+
 
     private List<CopyPlan> plans = new ArrayList<CopyPlan>();
     
     public void runPlans(){
-    	readCopyPlans();
-    	processCopyPlans();
+    	
+    	System.out.println("Starting Copy Session");
+    	if (readCopyPlans()){
+    		processCopyPlans();
+    	}
+    	System.out.println("Finishing Copy Session");
     	
     }
     
     
     // Read plans from ndex-copy-plans directory
-	private void readCopyPlans(){
-		try {
-			// 
+	private boolean readCopyPlans(){
+		System.out.println("Reading Copy Plans");
+		String currentDirectory = System.getProperty("user.dir");
+		System.out.println("Current directory for NDEx Copier is: " + currentDirectory);
+		String copyPlanDirectory = currentDirectory + "/ndex-copy-plans";
+		System.out.println("Therefore expecting copy plans in: " + copyPlanDirectory);
+		try {	
+			CopyPlanReader cpr = new CopyPlanReader(copyPlanDirectory);
+			plans = cpr.getCopyPlans();
+			System.out.println("Found " + plans.size() + " copy plans");
+			return true;
 		} catch (Exception e) {
-			// TODO Auto-generated catch block
+			System.out.println("Error attempting to read copyplan files from directory " + copyPlanDirectory);
 			e.printStackTrace();
 		}
+		return false;
+		
 	}
 	
 	// 
 	private void processCopyPlans(){
+		System.out.println("Processing Copy Plans");
 		for (CopyPlan plan : this.plans){
 			try {
 			
+				System.out.println("Processing copyPlan: " + plan.getPlanFileName());
+				System.out.println("  Source: " + plan.getSource().getRoute() + "  username: " + plan.getSource().getUsername());
+				System.out.println("  Target: " + plan.getTarget().getRoute() + "  username: " + plan.getTarget().getUsername());
+				
 				plan.process();
 				
 			} catch (Exception e) {
