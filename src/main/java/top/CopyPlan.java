@@ -4,9 +4,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.logging.Logger;
 
+import org.ndexbio.model.object.ProvenanceEntity;
+import org.ndexbio.model.object.ProvenanceEvent;
+import org.ndexbio.model.object.network.Network;
 import org.ndexbio.model.object.network.NetworkSummary;
-import org.ndexbio.model.object.network.Provenance;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
@@ -18,6 +21,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "planType")
 @JsonSubTypes(value = { @Type(value = QueryCopyPlan.class, name = "QueryCopyPlan"), @Type(value = IdCopyPlan.class, name = "IdCopyPlan") })
 public abstract class CopyPlan {
+	private final static Logger LOGGER = Logger.getLogger(CopyPlan.class.getName());
 	
 	NdexServer source;
 	NdexServer target;
@@ -26,7 +30,7 @@ public abstract class CopyPlan {
 	String planFileName;
 	List<NetworkSummary> sourceNetworks;
 	List<NetworkSummary> targetCandidates;
-	Map<String, Provenance> provenanceMap;
+	Map<String, ProvenanceEntity> provenanceMap;
 	
 
 	public void process() throws JsonProcessingException, IOException {
@@ -44,11 +48,11 @@ public abstract class CopyPlan {
 
 	private void findTargetCandidates() throws JsonProcessingException, IOException {
 		// Find networks in target NDEx in the target account.
-				// ...for the moment...
-				//        this is always the target user account.
-				//        and the number of networks queried is limited to 100
-				List<NetworkSummary> targetCandidates = target.getNdex().findNetworks("", target.getUsername(), 0, 100);
-				System.out.println("Found " + targetCandidates.size() + " networks in target NDEx under  " + target.getUsername());
+		// ...for the moment...
+		//        this is always the target user account.
+		//        and the number of networks queried is limited to 100
+		List<NetworkSummary> targetCandidates = target.getNdex().findNetworks("", target.getUsername(), 0, 100);
+		LOGGER.info("Found " + targetCandidates.size() + " networks in target NDEx under  " + target.getUsername());
 		
 	}
 
@@ -58,36 +62,95 @@ public abstract class CopyPlan {
 	}
 	
 	private void getAllTargetProvenance() throws JsonProcessingException, IOException {
-		// Get the provenance structure for each candidate network and store by UUID in the provenance map
+		// Get the provenance structure for each candidate network
+		// store by UUID in the provenance map
 		getAllProvenance(target, targetCandidates);
 	}
 
 	private void getAllSourceProvenance() throws JsonProcessingException, IOException {
-		// Get the provenance structure for each candidate network and store by UUID in the provenance map
+		// Get the provenance structure for each candidate network
+		// Store by UUID in the provenance map
 		getAllProvenance(source, sourceNetworks);
 	}
 	
 	private void getAllProvenance(NdexServer server, List<NetworkSummary> networks) throws JsonProcessingException, IOException{
 		for (NetworkSummary network : networks){
-			Provenance provenance = server.getNdex().getNetworkProvenance(network.getExternalId().toString());
+			ProvenanceEntity provenance = server.getNdex().getNetworkProvenance(network.getExternalId().toString());
 			if (null != provenance){
 				provenanceMap.put(network.getExternalId().toString(), provenance);
 			}
-		}
-		
+		}	
 	}
 
 	private void processSourceNetwork(NetworkSummary sourceNetwork) throws JsonProcessingException, IOException {
-		System.out.println("Processing source network " + sourceNetwork.getName() + " last modified " + sourceNetwork.getModificationDate());
-		//Provenance sourceProvenance = provenanceMap.get(sourceNetwork.getExternalId().toString());
+		LOGGER.info("Processing source network " + sourceNetwork.getName() + " last modified " + sourceNetwork.getModificationDate());
+		// Get the provenance of the source
+		ProvenanceEntity sRoot = provenanceMap.get(sourceNetwork.getExternalId().toString());
 		
+		// for targetCandidate, get provenance and determine whether the target candidate
+		// is a first generation copy of the source network.
 		
+		NetworkSummary targetNetwork = null;
 		
-		// for each, get provenance and determine whether it is a first generation copy of the source network
-		
+		for (NetworkSummary targetCandidate : targetCandidates){
+			ProvenanceEntity pRoot = provenanceMap.get(targetCandidate.getExternalId().toString());
+			
+			if (null != pRoot){
+				// no provenance, hence unknown status
+				
+			} else {
+				ProvenanceEvent pEvent = pRoot.getCreationEvent();
+				
+				// is the creation event a copy?
+				// TODO: checking for valid copy event: should have just one input
+				if ("COPY" == pEvent.getEventType()){
+					
+					List<ProvenanceEntity> inputs = pEvent.getInputs();
+					if (null != inputs && inputs.size() > 0){
+						
+						// does the input UUID match source UUID? 
+						ProvenanceEntity input = inputs.get(0);
+						if (input.getUri() == sRoot.getUri()){
+							// Yes, this is a copy of the source network
+							
+							
+							// Now check the modification date...
+							if(sourceNetwork.getModificationDate().after(pEvent.getEndDate())){
+								// The sourceNetwork is later than the end date of the copy event
+								// Therefore we should update the target
+							
+								targetNetwork = targetCandidate;
+								
+								break;
+							}
+						}
+					}
+	
+				} else {
+					// Most proximal event is not a copy, so this network cannot match the source
+				}
+			}
+		}
+		if (null != target){
+			// overwrite target
+		} else {
+			// no target found, copy network
+			Network entireNetwork = source.getNdex().getNetwork(sourceNetwork.getExternalId().toString());
+			try {
+				target.getNdex().createNetwork(entireNetwork);
+			} catch (Exception e) {
+				// TODO Auto-generated catch block
+				e.printStackTrace();
+			}
+		}
 	}
 	
 	// Attributes to be read from file
+
+	private String getNetworkURI(NetworkSummary sourceNetwork) {
+		// TODO Auto-generated method stub
+		return null;
+	}
 
 	public String getTargetGroupName() {
 		return targetGroupName;
