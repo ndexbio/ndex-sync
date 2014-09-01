@@ -2,6 +2,8 @@ package top;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
@@ -10,6 +12,7 @@ import org.ndexbio.model.object.ProvenanceEntity;
 import org.ndexbio.model.object.ProvenanceEvent;
 import org.ndexbio.model.object.network.Network;
 import org.ndexbio.model.object.network.NetworkSummary;
+import org.ndexbio.model.tools.ProvenanceHelpers;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
@@ -36,10 +39,11 @@ public abstract class CopyPlan {
 	public void process() throws JsonProcessingException, IOException {
 		source.initialize();
 		target.initialize();
+		provenanceMap = new HashMap<String, ProvenanceEntity>();
 		findSourceNetworks();
-		//getAllSourceProvenance();
+		getAllSourceProvenance();
 		findTargetCandidates();
-		//getAllTargetProvenance();
+		getAllTargetProvenance();
 		for (NetworkSummary network: sourceNetworks){
 			processSourceNetwork(network);
 		}
@@ -51,7 +55,7 @@ public abstract class CopyPlan {
 		// ...for the moment...
 		//        this is always the target user account.
 		//        and the number of networks queried is limited to 100
-		List<NetworkSummary> targetCandidates = target.getNdex().findNetworks("", target.getUsername(), 0, 100);
+		targetCandidates = target.getNdex().findNetworks("", target.getUsername(), 0, 100);
 		LOGGER.info("Found " + targetCandidates.size() + " networks in target NDEx under  " + target.getUsername());
 		
 	}
@@ -70,13 +74,16 @@ public abstract class CopyPlan {
 	private void getAllSourceProvenance() throws JsonProcessingException, IOException {
 		// Get the provenance structure for each candidate network
 		// Store by UUID in the provenance map
+		LOGGER.info("Getting Source Network Provenance for " + sourceNetworks.size() + " networks");
 		getAllProvenance(source, sourceNetworks);
 	}
 	
 	private void getAllProvenance(NdexServer server, List<NetworkSummary> networks) throws JsonProcessingException, IOException{
+		
 		for (NetworkSummary network : networks){
 			ProvenanceEntity provenance = server.getNdex().getNetworkProvenance(network.getExternalId().toString());
 			if (null != provenance){
+				LOGGER.info("Storing Provenance for network " + network.getExternalId());
 				provenanceMap.put(network.getExternalId().toString(), provenance);
 			}
 		}	
@@ -91,20 +98,21 @@ public abstract class CopyPlan {
 		// is a first generation copy of the source network.
 		
 		NetworkSummary targetNetwork = null;
+		boolean targetNetworkNeedsUpdate = false;
 		
 		for (NetworkSummary targetCandidate : targetCandidates){
 			ProvenanceEntity pRoot = provenanceMap.get(targetCandidate.getExternalId().toString());
 			
-			if (null != pRoot){
-				// no provenance, hence unknown status
+			if (null == pRoot){
+				// no provenance root entity, hence unknown status
 				
 			} else {
 				ProvenanceEvent pEvent = pRoot.getCreationEvent();
 				
 				// is the creation event a copy?
 				// TODO: checking for valid copy event: should have just one input
-				if ("COPY" == pEvent.getEventType()){
-					
+				if (null != pEvent && "COPY" == pEvent.getEventType()){
+					LOGGER.info("Found target candidate that is derived from a copy event ");
 					List<ProvenanceEntity> inputs = pEvent.getInputs();
 					if (null != inputs && inputs.size() > 0){
 						
@@ -112,14 +120,16 @@ public abstract class CopyPlan {
 						ProvenanceEntity input = inputs.get(0);
 						if (input.getUri() == sRoot.getUri()){
 							// Yes, this is a copy of the source network
+							LOGGER.info("Found direct copy of source network " + sRoot.getUri());
+							targetNetwork = targetCandidate;
 							
 							
 							// Now check the modification date...
 							if(sourceNetwork.getModificationDate().after(pEvent.getEndDate())){
 								// The sourceNetwork is later than the end date of the copy event
 								// Therefore we should update the target
-							
-								targetNetwork = targetCandidate;
+								LOGGER.info("Source copy date is after target copy event"); 
+								targetNetworkNeedsUpdate = true;
 								
 								break;
 							}
@@ -131,13 +141,26 @@ public abstract class CopyPlan {
 				}
 			}
 		}
-		if (null != target){
-			// overwrite target
+		if (null != targetNetwork){
+			if (targetNetworkNeedsUpdate){
+				// overwrite target
+				LOGGER.info("We have a target needing update, but update not implemented yet.");
+			} else {
+				LOGGER.info("We have a target, but does not need update, therefore not copying.");
+			}
 		} else {
 			// no target found, copy network
+			LOGGER.info("No target found, will copy the network ");
 			Network entireNetwork = source.getNdex().getNetwork(sourceNetwork.getExternalId().toString());
 			try {
-				target.getNdex().createNetwork(entireNetwork);
+				// TODO create updated provenance history
+				NetworkSummary copiedNetwork = target.getNdex().createNetwork(entireNetwork);
+				LOGGER.info("Copied " + sourceNetwork.getExternalId() + " to " + copiedNetwork.getExternalId());
+				ProvenanceEntity newProvananceHistory = createCopyProvenance(
+						copiedNetwork, 
+						sourceNetwork);
+				target.getNdex().setNetworkProvenance(copiedNetwork.getExternalId().toString(), newProvananceHistory);
+				LOGGER.info("Set provenance for  " + copiedNetwork.getExternalId());
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
 				e.printStackTrace();
@@ -147,9 +170,22 @@ public abstract class CopyPlan {
 	
 	// Attributes to be read from file
 
-	private String getNetworkURI(NetworkSummary sourceNetwork) {
-		// TODO Auto-generated method stub
-		return null;
+	private ProvenanceEntity createCopyProvenance(
+			NetworkSummary copiedNetwork,
+			NetworkSummary sourceNetwork) {
+		ProvenanceEntity sourceProvenanceEntity = provenanceMap.get(sourceNetwork.getExternalId().toString());
+		if (null == sourceProvenanceEntity){
+			// If the source didn't have any provenance, we create a minimal
+			// entity that has the appropriate URI
+			sourceProvenanceEntity = new ProvenanceEntity(sourceNetwork, source.getNdex().getBaseRoute());
+		}
+		return ProvenanceHelpers.createProvenanceHistory(
+				copiedNetwork,
+				target.getNdex().getBaseRoute(),
+				"COPY", 
+				new Date(),
+				sourceProvenanceEntity
+				);
 	}
 
 	public String getTargetGroupName() {
