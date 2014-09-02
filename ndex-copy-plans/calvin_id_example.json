@@ -1,0 +1,20 @@
+{
+	"planType" : "IdCopyPlan",
+	
+	"source" : {
+			"route" : "http://localhost:8080/ndexbio-rest",
+			"username" : "doom",
+			"password" : "doom"
+			},
+	
+	"target" : {
+			"route" : "http://localhost:8080/ndexbio-rest",
+			"username" : "calvin",
+			"password" : "robot"
+
+			},
+			
+	"idList" : [
+			"5bca3218-28ca-11e4-9032-90b11c72aefa"
+		]
+}
