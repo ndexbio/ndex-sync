@@ -1,7 +1,9 @@
 package top;
 
 import java.io.IOException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -90,7 +92,7 @@ public abstract class CopyPlan {
 	}
 
 	private void processSourceNetwork(NetworkSummary sourceNetwork) throws JsonProcessingException, IOException {
-		LOGGER.info("Processing source network " + sourceNetwork.getName() + " last modified " + sourceNetwork.getModificationDate());
+		LOGGER.info("Processing source network " + sourceNetwork.getName() + " last modified " + sourceNetwork.getModificationTime());
 		// Get the provenance of the source
 		ProvenanceEntity sRoot = provenanceMap.get(sourceNetwork.getExternalId().toString());
 		
@@ -125,7 +127,7 @@ public abstract class CopyPlan {
 							
 							
 							// Now check the modification date...
-							if(sourceNetwork.getModificationDate().after(pEvent.getEndDate())){
+							if(sourceNetwork.getModificationTime().after(pEvent.getEndedAtTime())){
 								// The sourceNetwork is later than the end date of the copy event
 								// Therefore we should update the target
 								LOGGER.info("Source copy date is after target copy event"); 
@@ -183,7 +185,7 @@ public abstract class CopyPlan {
 				copiedNetwork,
 				target.getNdex().getBaseRoute(),
 				"COPY", 
-				new Date(),
+				new Timestamp(Calendar.getInstance().getTimeInMillis()),
 				sourceProvenanceEntity
 				);
 	}
