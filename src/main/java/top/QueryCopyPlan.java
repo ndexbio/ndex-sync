@@ -27,9 +27,9 @@ public class QueryCopyPlan extends CopyPlan {
 				+ " source networks by query '" + queryString + "' with accountName " + queryAccountName);
 		try {
 			sourceNetworks = (List<NetworkSummary>) this.source.ndex.findNetworks(queryString, queryAccountName, 0, queryLimit);
-			System.out.println("Found " + sourceNetworks.size() + " networks");
+			LOGGER.info("Found " + sourceNetworks.size() + " networks");
 		} catch (IOException e) {
-			// TODO Auto-generated catch block
+			LOGGER.severe("Error while finding source networks: " + e.getMessage());
 			e.printStackTrace();
 		}
 		
