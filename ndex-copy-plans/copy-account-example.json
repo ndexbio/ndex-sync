@@ -2,19 +2,19 @@
 	"planType" : "QueryCopyPlan",
 	
 	"source" : {
-			"route" : "http://localhost:8080/ndexbio-rest",
-			"username" : "doom",
-			"password" : "doom"
+			"route" : "http://test.ndexbio.org/rest",
+			"username" : "cjones",
+			"password" : "cjones"
 			},
 	
 	"target" : {
 			"route" : "http://localhost:8080/ndexbio-rest",
-			"username" : "banner",
-			"password" : "smash"
+			"username" : "doom",
+			"password" : "doom"
 
 			},
 			
 	"queryString" : "",
 	"queryLimit" : "10",
-	"queryAccountName" : "nciadmin"
+	"queryAccountName" : "calvin"
 }

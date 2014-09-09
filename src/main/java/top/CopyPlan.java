@@ -116,8 +116,10 @@ public abstract class CopyPlan {
 			
 			if (null == pRoot){
 				// no provenance root entity, hence unknown status
+				LOGGER.info("No provenance history for target " + targetCandidate.getExternalId());
 				
 			} else {
+				LOGGER.info("Processing provenance history for target " + targetCandidate.getExternalId());
 				ProvenanceEvent pEvent = pRoot.getCreationEvent();
 				
 				// is the creation event a copy?
@@ -148,6 +150,7 @@ public abstract class CopyPlan {
 					}
 	
 				} else {
+					LOGGER.info("No provenance event or not a copy event for  " + targetCandidate.getExternalId());
 					// Most proximal event is not a copy, so this network cannot match the source,
 					// Therefore do nothing
 				}
