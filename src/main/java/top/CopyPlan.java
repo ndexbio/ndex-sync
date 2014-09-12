@@ -126,14 +126,14 @@ public abstract class CopyPlan {
 				
 				// is the creation event a copy?
 				// TODO: checking for valid copy event: should have just one input
-				if (null != pEvent && "COPY" == pEvent.getEventType()){
+				if (null != pEvent && "COPY".equals(pEvent.getEventType())){
 					LOGGER.info("Found target candidate that is derived from a copy event ");
 					List<ProvenanceEntity> inputs = pEvent.getInputs();
 					if (null != inputs && inputs.size() > 0){
 						
 						// does the input UUID match source UUID? 
 						ProvenanceEntity input = inputs.get(0);
-						if (input.getUri() == sRoot.getUri()){
+						if (input.getUri().equalsIgnoreCase(sRoot.getUri())){
 							// Yes, this is a copy of the source network
 							LOGGER.info("Found direct copy of source network " + sRoot.getUri());
 							targetNetwork = targetCandidate;
@@ -143,7 +143,7 @@ public abstract class CopyPlan {
 							if(sourceNetwork.getModificationTime().after(pEvent.getEndedAtTime())){
 								// The sourceNetwork is later than the end date of the copy event
 								// Therefore we should update the target
-								LOGGER.info("Source copy date is after target copy event"); 
+								LOGGER.info("Source copy date is after target copy event, therefore needs update"); 
 								targetNetworkNeedsUpdate = true;
 								
 								break;

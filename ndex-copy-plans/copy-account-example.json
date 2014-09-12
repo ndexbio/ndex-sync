@@ -2,9 +2,9 @@
 	"planType" : "QueryCopyPlan",
 	
 	"source" : {
-			"route" : "http://test.ndexbio.org/rest",
-			"username" : "cjones",
-			"password" : "cjones"
+			"route" : "http://www.ndexbio.org/rest",
+			"username" : "dexterpratt",
+			"password" : "carbluegreen"
 			},
 	
 	"target" : {
@@ -14,7 +14,7 @@
 
 			},
 			
-	"queryString" : "",
+	"queryString" : "Steroid",
 	"queryLimit" : "10",
-	"queryAccountName" : "calvin"
+	"queryAccountName" : "dexterpratt"
 }
