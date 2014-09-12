@@ -111,6 +111,8 @@ public abstract class CopyPlan {
 		NetworkSummary targetNetwork = null;
 		boolean targetNetworkNeedsUpdate = false;
 		
+		// Evaluate all targetCandidates to see if there is an existing copy of the source
+		// and whether that copy needs update
 		for (NetworkSummary targetCandidate : targetCandidates){
 			ProvenanceEntity pRoot = provenanceMap.get(targetCandidate.getExternalId().toString());
 			
@@ -156,28 +158,38 @@ public abstract class CopyPlan {
 				}
 			}
 		}
+		
+		// now do a copy or update, if 
+		// 1. there is no target that is a copy or 
+		// 2. if there is a only a copy needing update.
+		//
 		if (null != targetNetwork){
 			if (targetNetworkNeedsUpdate){
 				// overwrite target
-				LOGGER.info("We have a target needing update, but update is not implemented yet.");
+				LOGGER.info("We have a target that is a copy needing update, but update is not implemented yet, so just making another copy.");
+				copyNetwork(sourceNetwork);
 			} else {
-				LOGGER.info("We have a target, but it does not need update, therefore not copying.");
+				LOGGER.info("We have a target that is an existing copy, but it does not need update, therefore not copying.");
 			}
 		} else {
 			// no target found, copy network
-			LOGGER.info("No target found, will therefore copy the network ");
-			Network entireNetwork = source.getNdex().getNetwork(sourceNetwork.getExternalId().toString());
-			try {
-				// TODO create updated provenance history
-				NetworkSummary copiedNetwork = target.getNdex().createNetwork(entireNetwork);
-				LOGGER.info("Copied " + sourceNetwork.getExternalId() + " to " + copiedNetwork.getExternalId());
-				ProvenanceEntity newProvananceHistory = createCopyProvenance(copiedNetwork, sourceNetwork);
-				target.getNdex().setNetworkProvenance(copiedNetwork.getExternalId().toString(), newProvananceHistory);
-				LOGGER.info("Set provenance for copy " + copiedNetwork.getExternalId());
-			} catch (Exception e) {
-				LOGGER.severe("Error attempting to copy " + sourceNetwork.getExternalId());
-				e.printStackTrace();
-			}
+			LOGGER.info("No target that is a copy of the source found, will therefore copy the network ");
+			copyNetwork(sourceNetwork);
+		}
+	}
+	
+	private void copyNetwork(NetworkSummary sourceNetwork) throws IOException{
+		Network entireNetwork = source.getNdex().getNetwork(sourceNetwork.getExternalId().toString());
+		try {
+			// TODO create updated provenance history
+			NetworkSummary copiedNetwork = target.getNdex().createNetwork(entireNetwork);
+			LOGGER.info("Copied " + sourceNetwork.getExternalId() + " to " + copiedNetwork.getExternalId());
+			ProvenanceEntity newProvananceHistory = createCopyProvenance(copiedNetwork, sourceNetwork);
+			target.getNdex().setNetworkProvenance(copiedNetwork.getExternalId().toString(), newProvananceHistory);
+			LOGGER.info("Set provenance for copy " + copiedNetwork.getExternalId());
+		} catch (Exception e) {
+			LOGGER.severe("Error attempting to copy " + sourceNetwork.getExternalId());
+			e.printStackTrace();
 		}
 	}
 	
