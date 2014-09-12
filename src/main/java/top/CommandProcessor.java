@@ -10,14 +10,15 @@ public class CommandProcessor {
 	}
 
 	public static void main(String[] args) {
-		// For the moment, as a proof of concept, 
-		// we will ignore the arguments and just run
-		// a pre-packaged set of queries to the local NDEx,
-		// assuming that it is running with the default database.
+		// expects one argument - a directory in which to find the copy plans
 		CommandProcessor cp = new CommandProcessor();
 		Copier copier = new Copier();
 		try {
-			copier.runPlans();
+			if (args.length == 0) {
+				System.out.println("NDEx Copier requires a directory of copy plans as an argument");
+			} else {
+				copier.runPlans(args[0]);
+			}
 		} catch (IllegalArgumentException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();

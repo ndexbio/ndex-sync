@@ -1,5 +1,6 @@
 package top;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
@@ -10,10 +11,10 @@ public class Copier {
 
     private List<CopyPlan> plans = new ArrayList<CopyPlan>();
     
-    public void runPlans(){
+    public void runPlans(String directoryString){
     	
     	LOGGER.info("Starting Copy Session");
-    	if (readCopyPlans()){
+    	if (readCopyPlans(directoryString)){
     		processCopyPlans();
     	}
     	LOGGER.info("Finishing Copy Session");
@@ -22,19 +23,26 @@ public class Copier {
     
     
     // Read plans from ndex-copy-plans directory
-	private boolean readCopyPlans(){
-		LOGGER.info("Reading Copy Plans");
-		String currentDirectory = System.getProperty("user.dir");
-		LOGGER.info("Current directory for NDEx Copier is: " + currentDirectory);
-		String copyPlanDirectory = currentDirectory + "/ndex-copy-plans";
-		LOGGER.info("Therefore expecting copy plans in: " + copyPlanDirectory);
-		try {	
+	private boolean readCopyPlans(String directoryString){
+
+		//LOGGER.info("Reading Copy Plans");
+		//String currentDirectory = System.getProperty("user.dir");
+		//LOGGER.info("Current directory for NDEx Copier is: " + currentDirectory);
+		//String copyPlanDirectory = currentDirectory + "/ndex-copy-plans";
+		//LOGGER.info("Therefore expecting copy plans in: " + copyPlanDirectory);
+		try {
+			File cpd = new File(directoryString);
+			
+			String copyPlanDirectory = cpd.getCanonicalPath();
+			
+			LOGGER.info("Reading Copy Plans in: " + copyPlanDirectory);
+			
 			CopyPlanReader cpr = new CopyPlanReader(copyPlanDirectory);
 			plans = cpr.getCopyPlans();
 			LOGGER.info("Found " + plans.size() + " copy plans");
 			return true;
 		} catch (Exception e) {
-			LOGGER.severe("Error attempting to read copyplan files from directory " + copyPlanDirectory);
+			LOGGER.severe("Error attempting to read copyplan files from directory " + directoryString);
 			e.printStackTrace();
 		}
 		return false;
