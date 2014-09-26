@@ -1,4 +1,4 @@
-package top;
+package org.ndexbio.sync;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -17,10 +17,11 @@ public class IdCopyPlan extends CopyPlan {
 		super();
 	}
 	
+	@Override
 	public void findSourceNetworks(){
 		try {
 			
-			sourceNetworks = new ArrayList<NetworkSummary>();
+			sourceNetworks = new ArrayList<>();
 			
 			for (String sourceNetworkId : idList){
 				NetworkSummary network = source.getNdex().getNetwork(sourceNetworkId);

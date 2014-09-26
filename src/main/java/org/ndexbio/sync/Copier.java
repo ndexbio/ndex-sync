@@ -1,4 +1,4 @@
-package top;
+package org.ndexbio.sync;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -9,7 +9,7 @@ public class Copier {
 	private final static Logger LOGGER = Logger.getLogger(Copier.class.getName());
 
 
-    private List<CopyPlan> plans = new ArrayList<CopyPlan>();
+    private List<CopyPlan> plans = new ArrayList<>();
     
     public void runPlans(String directoryString){
     	

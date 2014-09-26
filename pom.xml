@@ -56,7 +56,7 @@
 					</descriptorRefs>
 					<archive>
 						<manifest>
-							<mainClass>top.CommandProcessor</mainClass>
+							<mainClass>org.ndexbio.sync.CommandProcessor</mainClass>
 						</manifest>
 					</archive>
 				</configuration>

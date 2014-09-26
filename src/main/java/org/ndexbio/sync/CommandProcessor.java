@@ -1,4 +1,4 @@
-package top;
+package org.ndexbio.sync;
 
 
 public class CommandProcessor {
@@ -11,7 +11,7 @@ public class CommandProcessor {
 
 	public static void main(String[] args) {
 		// expects one argument - a directory in which to find the copy plans
-		CommandProcessor cp = new CommandProcessor();
+		//CommandProcessor cp = new CommandProcessor();
 		Copier copier = new Copier();
 		try {
 			if (args.length == 0) {

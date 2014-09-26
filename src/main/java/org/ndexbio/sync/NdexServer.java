@@ -1,4 +1,4 @@
-package top;
+package org.ndexbio.sync;
 
 import org.ndexbio.rest.client.NdexRestClient;
 import org.ndexbio.rest.client.NdexRestClientModelAccessLayer;

@@ -1,10 +1,9 @@
-package top;
+package org.ndexbio.sync;
 
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Calendar;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -42,7 +41,7 @@ public abstract class CopyPlan {
 	public void process() throws JsonProcessingException, IOException {
 		source.initialize();
 		target.initialize();
-		provenanceMap = new HashMap<String, ProvenanceEntity>();
+		provenanceMap = new HashMap<>();
 		findSourceNetworks();
 		getAllSourceProvenance();
 		findTargetCandidates();
@@ -66,7 +65,7 @@ public abstract class CopyPlan {
 
 	public void findSourceNetworks(){
 		LOGGER.severe("Unexpected call to default no-op method for finding source networks");
-		sourceNetworks = new ArrayList<NetworkSummary>();
+		sourceNetworks = new ArrayList<>();
 	}
 
 	// Get the provenance history for each candidate network in the target account
