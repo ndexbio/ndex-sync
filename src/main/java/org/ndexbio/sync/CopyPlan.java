@@ -63,10 +63,7 @@ public abstract class CopyPlan {
 		LOGGER.info("Found " + targetCandidates.size() + " networks in target NDEx under  " + target.getUsername());		
 	}
 
-	public void findSourceNetworks(){
-		LOGGER.severe("Unexpected call to default no-op method for finding source networks");
-		sourceNetworks = new ArrayList<>();
-	}
+	public abstract void findSourceNetworks();
 
 	// Get the provenance history for each candidate network in the target account
 	//

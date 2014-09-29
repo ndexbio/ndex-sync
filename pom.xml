@@ -54,6 +54,8 @@
 					<descriptorRefs>
 						<descriptorRef>jar-with-dependencies</descriptorRef>
 					</descriptorRefs>
+        			<finalName>ndexbio-sync</finalName>
+        			<appendAssemblyId>false</appendAssemblyId>
 					<archive>
 						<manifest>
 							<mainClass>org.ndexbio.sync.CommandProcessor</mainClass>
