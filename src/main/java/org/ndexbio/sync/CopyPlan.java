@@ -9,6 +9,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
+import org.ndexbio.model.exceptions.NdexException;
 import org.ndexbio.model.object.ProvenanceEntity;
 import org.ndexbio.model.object.ProvenanceEvent;
 import org.ndexbio.model.object.network.Network;
@@ -38,7 +39,7 @@ public abstract class CopyPlan {
 	Map<String, ProvenanceEntity> provenanceMap;
 	
 
-	public void process() throws JsonProcessingException, IOException {
+	public void process() throws JsonProcessingException, IOException, NdexException {
 		source.initialize();
 		target.initialize();
 		provenanceMap = new HashMap<>();
@@ -63,18 +64,18 @@ public abstract class CopyPlan {
 		LOGGER.info("Found " + targetCandidates.size() + " networks in target NDEx under  " + target.getUsername());		
 	}
 
-	public abstract void findSourceNetworks();
+	public abstract void findSourceNetworks() throws NdexException;
 
 	// Get the provenance history for each candidate network in the target account
 	//
-	private void getAllTargetProvenance() throws JsonProcessingException, IOException {
+	private void getAllTargetProvenance() throws JsonProcessingException, IOException, NdexException {
 		LOGGER.info("Getting provenance history for " + targetCandidates.size() + " candidate networks in target account");
 		getAllProvenance(target, targetCandidates);
 	}
 
 	// Get the provenance history for each source network
 	//
-	private void getAllSourceProvenance() throws JsonProcessingException, IOException {
+	private void getAllSourceProvenance() throws JsonProcessingException, IOException, NdexException {
 		LOGGER.info("Getting Source Network Provenance for " + sourceNetworks.size() + " networks");
 		getAllProvenance(source, sourceNetworks);
 	}
@@ -82,7 +83,7 @@ public abstract class CopyPlan {
 	// Get the provenance history for a list of networks
 	// Store by UUID in the provenance map
 	//
-	private void getAllProvenance(NdexServer server, List<NetworkSummary> networks) throws JsonProcessingException, IOException{
+	private void getAllProvenance(NdexServer server, List<NetworkSummary> networks) throws JsonProcessingException, IOException, NdexException{
 		
 		for (NetworkSummary network : networks){
 			ProvenanceEntity provenance = server.getNdex().getNetworkProvenance(network.getExternalId().toString());
@@ -95,7 +96,7 @@ public abstract class CopyPlan {
 
 	// Process one source network
 	//
-	private void processSourceNetwork(NetworkSummary sourceNetwork) throws JsonProcessingException, IOException {
+	private void processSourceNetwork(NetworkSummary sourceNetwork) throws JsonProcessingException, IOException, NdexException {
 		LOGGER.info("Processing source network " + sourceNetwork.getName() + " last modified " + sourceNetwork.getModificationTime());
 		
 		// Get the provenance history of the source from the provenance map
@@ -174,7 +175,7 @@ public abstract class CopyPlan {
 		}
 	}
 	
-	private void copyNetwork(NetworkSummary sourceNetwork) throws IOException{
+	private void copyNetwork(NetworkSummary sourceNetwork) throws IOException, NdexException{
 		Network entireNetwork = source.getNdex().getNetwork(sourceNetwork.getExternalId().toString());
 		try {
 			// TODO create updated provenance history

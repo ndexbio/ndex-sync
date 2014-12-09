@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
+import org.ndexbio.model.exceptions.NdexException;
 import org.ndexbio.model.object.network.NetworkSummary;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -18,7 +19,7 @@ public class IdCopyPlan extends CopyPlan {
 	}
 	
 	@Override
-	public void findSourceNetworks(){
+	public void findSourceNetworks() throws NdexException{
 		try {
 			
 			sourceNetworks = new ArrayList<>();
