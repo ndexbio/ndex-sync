@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.logging.Logger;
 
 import org.ndexbio.model.exceptions.NdexException;
+import org.ndexbio.model.object.Permissions;
 import org.ndexbio.model.object.ProvenanceEntity;
 import org.ndexbio.model.object.ProvenanceEvent;
 import org.ndexbio.model.object.network.Network;
@@ -60,7 +61,7 @@ public abstract class CopyPlan {
 	//        the number of networks queried is limited to 100
 	//
 	private void findTargetCandidates() throws JsonProcessingException, IOException {
-		targetCandidates = target.getNdex().findNetworks("", target.getUsername(), 0, 100);
+		targetCandidates = target.getNdex().findNetworks("", true, target.getUsername(), Permissions.ADMIN, false, 0, 100);
 		LOGGER.info("Found " + targetCandidates.size() + " networks in target NDEx under  " + target.getUsername());		
 	}
 
