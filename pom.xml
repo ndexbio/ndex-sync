@@ -4,7 +4,7 @@
 	<modelVersion>4.0.0</modelVersion>
 	<groupId>ndexbio.org</groupId>
 	<artifactId>ndex-sync</artifactId>
-	<version>1.0.0</version>
+	<version>1.2.0</version>
 	<name>NDEx Synchronization Application</name>
 	<description>Application to synchronize networks between NDEx Server instances</description>
 	<dependencies>
