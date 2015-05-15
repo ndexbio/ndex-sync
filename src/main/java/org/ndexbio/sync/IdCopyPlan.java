@@ -25,7 +25,7 @@ public class IdCopyPlan extends CopyPlan {
 			sourceNetworks = new ArrayList<>();
 			
 			for (String sourceNetworkId : idList){
-				NetworkSummary network = source.getNdex().getNetwork(sourceNetworkId);
+				NetworkSummary network = source.getNdex().getNetworkSummaryById(sourceNetworkId);				
 				if (null != network){
 					sourceNetworks.add(network);
 				}
