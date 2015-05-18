@@ -101,15 +101,32 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 	// Get the provenance history for a list of networks
 	// Store by UUID in the provenance map
 	//
-	private void getAllProvenance(NdexServer server, List<NetworkSummary> networks) throws JsonProcessingException, IOException, NdexException{
+	private void getAllProvenance(NdexServer server, List<NetworkSummary> networks) { //throws JsonProcessingException, IOException, NdexException{
 		
-		for (NetworkSummary network : networks){
-			ProvenanceEntity provenance = server.getNdex().getNetworkProvenance(network.getExternalId().toString());
-			if (null != provenance){
-				LOGGER.info("Storing Provenance for network " + network.getExternalId());
-				provenanceMap.put(network.getExternalId().toString(), provenance);
+		ArrayList<NetworkSummary> networksNotToCopy = new ArrayList<NetworkSummary>();
+		
+		for (NetworkSummary network : networks) {
+			try {
+			    ProvenanceEntity provenance = server.getNdex().getNetworkProvenance(network.getExternalId().toString());
+			    if (null != provenance) {
+			    	LOGGER.info("Storing Provenance for network " + network.getExternalId());
+				    provenanceMap.put(network.getExternalId().toString(), provenance);
+			    }
+			} catch (IOException | NdexException e) {
+				// unable to read this networks' provenance.  It means we won't be able to copy/update it.
+				// Let's save it in the networksNotToCopy list and remove it from the copy plan later. 
+				networksNotToCopy.add(network);
+
+                System.out.println(e.getMessage());
+                continue;
 			}
-		}	
+		}
+				
+		for (NetworkSummary network : networksNotToCopy) {
+			// remove networks whose provenance we couldn't read, since we can't copy/update these networks
+			networks.remove(network);
+		}
+		
 	}
 
 	// Process one source network
