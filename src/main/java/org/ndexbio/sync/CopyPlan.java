@@ -167,7 +167,7 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 				continue;   // get next target network
 			}
 			
-			if (SNYC_COPY.equals(targetProvenanceEvent.getEventType())) {
+			if (SNYC_COPY.equalsIgnoreCase(targetProvenanceEvent.getEventType())) {
 				// COPY was the latest event for the current target;  let's get UUID of the parent network
 				
 				if ((targetRootProvenanceEntity.getProperties() != null) && (targetRootProvenanceEntity.getProperties().size() >= 3) ) {
@@ -303,7 +303,7 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 				
 				while(inputs != null) {
 
-					if (SNYC_COPY.equals(inputs.get(0).getCreationEvent().getEventType())) {
+					if (SNYC_COPY.equalsIgnoreCase(inputs.get(0).getCreationEvent().getEventType())) {
 						
     					//copyEventFound = true;
     					
@@ -431,7 +431,7 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 				
 				// is the creation event a copy?
 				// TODO: checking for valid copy event: should have just one input
-				if (null != pEvent && SNYC_COPY.equals(pEvent.getEventType())){
+				if (null != pEvent && SNYC_COPY.equalsIgnoreCase(pEvent.getEventType())){
 					LOGGER.info("Found target candidate that is derived from a copy event ");
 					List<ProvenanceEntity> inputs = pEvent.getInputs();
 					if (null != inputs && inputs.size() > 0){
@@ -511,10 +511,11 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 			sourceProvenanceEntity = new ProvenanceEntity(sourceNetwork, source.getNdex().getBaseRoute());
 		}
 		
+	
 		// Create the history
 		ProvenanceEntity copyProv = ProvenanceHelpers.createProvenanceHistory(
 				copiedNetwork,
-				target.getNdex().getBaseRoute(),
+				copiedNetwork.getURI(),
 				SNYC_COPY, 
 				new Timestamp(Calendar.getInstance().getTimeInMillis()),
 				sourceProvenanceEntity
@@ -522,10 +523,10 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 		
 		// Add properties based on 
 		if (null != sourceNetwork.getName()){
-			PropertyHelpers.addProperty("DC:Title", sourceNetwork.getName(), copyProv.getProperties());
+			PropertyHelpers.addProperty("dc:title", sourceNetwork.getName(), copyProv.getProperties());
 		}
 		if (null != sourceNetwork.getDescription()){
-			PropertyHelpers.addProperty("DC:Description", sourceNetwork.getName(), copyProv.getProperties());
+			PropertyHelpers.addProperty("dc:description", sourceNetwork.getName(), copyProv.getProperties());
 		}
 		PropertyHelpers.addProperty("pav:retrievedFrom", sourceNetwork.getURI(), copyProv.getProperties());
 		return copyProv;
