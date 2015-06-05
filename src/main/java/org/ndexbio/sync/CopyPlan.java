@@ -261,10 +261,10 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
                 // configuration parameter.  To check if target is read-only, if (targetCandidate.getReadOnlyCommitId() > 0).
                     
     	    	if ((targetCandidate.getReadOnlyCommitId() > 0) && (false == updateReadOnlyNetwork)) {
-    	     	   // the target is read-only and updateReadOnlyNetwork config parameter is false, don't update target
-    				LOGGER.info("Target network " + targetCandidate.getExternalId() + " is read-only and updateReadOnlyNetwork is false. Not updating target and not copying to target.");
+    	     	    // the target is read-only and updateReadOnlyNetwork config parameter is false, don't update target
+    				LOGGER.info("Target network " + targetCandidate.getExternalId() + " is read-only and updateReadOnlyNetwork is false. Not updating target.");
                     	
-    				copySourceNetwork = false;             	
+    				//copySourceNetwork = false;             	
                     continue;  // get next target network
     	    	}
     				
