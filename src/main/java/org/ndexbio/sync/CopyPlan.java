@@ -167,184 +167,123 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 				continue;   // get next target network
 			}
 			
-			if (SNYC_COPY.equalsIgnoreCase(targetProvenanceEvent.getEventType())) {
-				// COPY was the latest event for the current target;  let's get UUID of the parent network
+			if (!SNYC_COPY.equalsIgnoreCase(targetProvenanceEvent.getEventType())) {
+				//  latest (most recent) event in provenance
+				continue;
+			}
+			
+			
+			// COPY was the latest (most recent) event for the current target;  let's get UUID of the parent network
 				
-				if ((targetRootProvenanceEntity.getProperties() != null) && (targetRootProvenanceEntity.getProperties().size() >= 3) ) {
-					parentEntityUri = targetRootProvenanceEntity.getProperties().get(2).getValue();  // get URI of parent network
+			if ((targetRootProvenanceEntity.getProperties() != null) && (targetRootProvenanceEntity.getProperties().size() >= 3) ) {
+				parentEntityUri = targetRootProvenanceEntity.getProperties().get(2).getValue();  // get URI of parent network
 	
-					try {
-						//extract UUID from URI
-						URI uri = new URI(parentEntityUri);
-						String[] segments = uri.getPath().split("/");
-						parentNetworkUUID = segments[segments.length-1];
+				try {
+					//extract UUID from URI
+					URI uri = new URI(parentEntityUri);
+					String[] segments = uri.getPath().split("/");
+					parentNetworkUUID = segments[segments.length-1];
 						
-						//parentNetworkUUID = parentEntityUri.replaceFirst(".*/([^/?]+).*", "$1");  // this is another way of extracting UUID of parent network
-						
-						LOGGER.info("UUID of the parent network found in provenance of target network " + targetCandidate.getExternalId() + 
+					//parentNetworkUUID = parentEntityUri.replaceFirst(".*/([^/?]+).*", "$1");  // this is another way of extracting UUID of parent network
+					LOGGER.info("UUID of the parent network found in provenance of target network " + targetCandidate.getExternalId() + 
 						    " is " + parentNetworkUUID);
 						
-					} catch (URISyntaxException e) {
+				} catch (URISyntaxException e) {
 
-						LOGGER.info("Unable to get UUID of the parent network from provenance of target network " + targetCandidate.getExternalId() 
-								+ "  Exception thrown: " + e.getMessage());		
-						continue;  // get next target network
-					}
-					
-					
-					// if we reached this point, it means we found/extracted from the provenace of target network the UUID of the
-					// network that created this target network by COPY and that COPY  was the last event of the target network 
-					// (target network was not modified after that). 
-					// Let's check UUIDs of source and target networks.
-					
-					if (!sourceNetworkUUID.equals(parentNetworkUUID))  {
-						// this target network was NOT created from the current source network,
-						// therefore, we cannot update it
-						// LOGGER.info("sourceNetworkUUID " + sourceNetworkUUID + "doesn't equal parentNetworkUUID " + parentNetworkUUID);
-						continue;  // get next target network
-					} 
-					
-					if (null == sourceRootProvenanceEntity){
-						// no provenance root entity, hence unknown status
-						LOGGER.info("No provenance entity exists for source network" + sourceNetwork.getExternalId().toString());
-						continue;   // get next target network
-					} 		
-					
-					ProvenanceEvent sourceProvenanceEvent = sourceRootProvenanceEntity.getCreationEvent();
-					
-					if (null == sourceProvenanceEvent) {
-						LOGGER.info("No provenance event exists for source " + sourceNetwork.getExternalId().toString());
-						continue;   // get next target network
-					}
-					
-    				LOGGER.info("sourceNetworkUUID " + sourceNetworkUUID + " equals parentNetworkUUID " + parentNetworkUUID);
-    				
-                    // target network was created from source network and was not modified after that (last target event was COPY).
-					// Let's check if target network is "out-of-date".
-
-    				// calculate latestSourceDate as the later of modification date and the last provenance history event end date for the source network.
-    				Timestamp latestSourceDate = 
-    						(sourceNetwork.getModificationTime().after((Timestamp)sourceProvenanceEvent.getEndedAtTime())) ?
-    						sourceNetwork.getModificationTime() : ((Timestamp)sourceProvenanceEvent.getEndedAtTime());
-    						
-    	    		// calculate earliestTargetDate as the earlier of modification date and the last provenance history event end date for the target network.
-    	    		Timestamp earliestTargetDate = 
-    	    				(targetCandidate.getModificationTime().before((Timestamp)targetProvenanceEvent.getEndedAtTime())) ?
-    	    				targetCandidate.getModificationTime() : ((Timestamp) targetProvenanceEvent.getEndedAtTime());
-
-    	    	    // System.out.println("sourceNetwork.getModificationTime()=" + sourceNetwork.getModificationTime() + "   " +
-    	    	    // 		" (Timestamp)sEvent.getEndedAtTime()=" + (Timestamp)sourceProvenanceEvent.getEndedAtTime());	
-    	    	    		
-    	    	    // System.out.println("targetCandidate.getModificationTime()=" + targetCandidate.getModificationTime() + "   " +
-    	    		//		" pEvent.getEndedAtTime()=" + (Timestamp) targetProvenanceEvent.getEndedAtTime());	
-    	    		
-    	    	    //System.out.println("latestSourceDate=" + latestSourceDate.toString() + "   earliestTargetDate= " + earliestTargetDate.toString() );
-    	    				
-                    if (latestSourceDate.before(earliestTargetDate)) {
-                    	// target network update/modify time is more recent than that of source network;  don't update target
-                    	LOGGER.info("latestSourceDate = " + latestSourceDate.toString() + 
-                    			";  earliestTargetDate =  " + earliestTargetDate.toString() + ". Not updating target.");
-                    	
-                    	// since there exists a copy of the source network on the target server that doesn't require updating,
-                    	// we will not copy this source network to target.
-                    	copySourceNetwork = false;
-                    	
-                    	continue;  // get next target network
-                    }
-
-                    // let's check if the target network is read-only, and if yes, check the value of updateReadOnlyNetwork 
-                    // configuration parameter.  To check if target is read-only, if (targetCandidate.getReadOnlyCommitId() > 0).
-                    
-    	    		if ((targetCandidate.getReadOnlyCommitId() > 0) && (false == updateReadOnlyNetwork)) {
-    	    			// the target is read-only and updateReadOnlyNetwork config parameter is false, don't update target
-    					LOGGER.info("Target network " + targetCandidate.getExternalId() + " is read-only and updateReadOnlyNetwork is false. Not updating target.");
-                    	
-    					copySourceNetwork = false;             	
-                    	continue;  // get next target network
-    	    		}
-    				
-    	    		// finally, update the target network
-    	    		if (targetCandidate.getReadOnlyCommitId() > 0) {
-    	    			// target network is read-only
-    	    			updateReadOnlyNetwork(sourceNetwork, targetCandidate);
-    	    			copySourceNetwork = false;
-    	    		} else {
-    	    			// target network is not read-only
-    	    			updateNetwork(sourceNetwork, targetCandidate);
-    	    			copySourceNetwork = false;
-    	    		}
-    	    		
-				} else {  // if ((pRoot.getProperties() != null) && (pRoot.getProperties().size() >= 3) )
-					// 
-					LOGGER.info("Unable to get UUID of the parent network because the pav:retrievedFrom property is missing from provenance of target network " + 
-					     targetCandidate.getExternalId());
-					
+					LOGGER.info("Unable to get UUID of the parent network from provenance of target network " + targetCandidate.getExternalId() 
+							+ "  Exception thrown: " + e.getMessage());		
 					continue;  // get next target network
 				}
-				
-			} else {  // if (SNYC_COPY.equals(pEvent.getEventType())) {
-				
-				// the latest provenance event of the target network was not COPY. 
-				// This means that we will not update the current target network, but it is possible that
-				// we'll have to copy source network over to the target (in case no target network
-				// was created by copying it from the current source network). 
-				// So, we'll traverse provenance from the latest event back to the earliest one to find the latest (most recent) COPY event.
-				// If we find a COPY event, we'll compare UUID of the source network and network that created target. 
-				
-				List<ProvenanceEntity> inputs = targetProvenanceEvent.getInputs();
-				
-				if ((null == inputs) || (inputs.size() == 0)) {
-					LOGGER.info("No provenance history exists for target " + targetCandidate.getExternalId());
-					continue;   // get next source network
+					
+					
+				// if we reached this point, it means we found/extracted from the provenace of target network the UUID of the
+				// network that created this target network by COPY and that COPY  was the last event of the target network 
+				// (target network was not modified after that). 
+				// Let's check UUIDs of source and target networks.
+					
+				if (!sourceNetworkUUID.equals(parentNetworkUUID))  {
+					// this target network was NOT created from the current source network,
+					// therefore, we cannot update it
+					// LOGGER.info("sourceNetworkUUID " + sourceNetworkUUID + "doesn't equal parentNetworkUUID " + parentNetworkUUID);
+					continue;  // get next target network
+				} 
+					
+				if (null == sourceRootProvenanceEntity){
+					// no provenance root entity, hence unknown status
+					LOGGER.info("No provenance entity exists for source network" + sourceNetwork.getExternalId().toString());
+					continue;   // get next target network
+				} 		
+					
+				ProvenanceEvent sourceProvenanceEvent = sourceRootProvenanceEntity.getCreationEvent();
+					
+				if (null == sourceProvenanceEvent) {
+					LOGGER.info("No provenance event exists for source " + sourceNetwork.getExternalId().toString());
+					continue;   // get next target network
 				}
+					
+    			LOGGER.info("sourceNetworkUUID " + sourceNetworkUUID + " equals parentNetworkUUID " + parentNetworkUUID);
+    				
+                // target network was created from source network and was not modified after that (last target event was COPY).
+			    // Let's check if target network is "out-of-date".
 
-				//copyEventFound = false;
-				parentEntityUri = null;
-				
-				while(inputs != null) {
-
-					if (SNYC_COPY.equalsIgnoreCase(inputs.get(0).getCreationEvent().getEventType())) {
-						
-    					//copyEventFound = true;
-    					
-    					if ((inputs.get(0).getProperties() != null) && (inputs.get(0).getProperties().size() >= 3) ) {
-    					 
-    					    parentEntityUri = inputs.get(0).getProperties().get(2).getValue();  // get URI of parent network
-    					    
-    						try {
-    							//extract UUID from URI
-    							URI uri = new URI(parentEntityUri);
-    							String[] segments = uri.getPath().split("/");
-    							parentNetworkUUID = segments[segments.length-1];
-    							
-    							//parentNetworkUUID = parentEntityUri.replaceFirst(".*/([^/?]+).*", "$1");  // this is another way of extracting UUID of parent network
-    							
-    							LOGGER.info("UUID of the parent network found in provenance of target network " + targetCandidate.getExternalId() + 
-    							    " is " + parentNetworkUUID);
-    							
-    						} catch (URISyntaxException e) {
-
-    							LOGGER.info("Unable to get UUID of the parent network from provenance of target network " + targetCandidate.getExternalId() 
-    									+ "  Exception thrown: " + e.getMessage());
-    							break;
-    						}
+    			// calculate latestSourceDate as the later of modification date and the last provenance history event end date for the source network.
+    			Timestamp latestSourceDate = 
+    					(sourceNetwork.getModificationTime().after((Timestamp)sourceProvenanceEvent.getEndedAtTime())) ?
+    					sourceNetwork.getModificationTime() : ((Timestamp)sourceProvenanceEvent.getEndedAtTime());
     						
-    						if (sourceNetworkUUID.equals(parentNetworkUUID))  {
-    							// found that the current target network was created by COPY from source network.
-    							// Don't copy source network over to target.
-    	    					copySourceNetwork = false;
-    							break;  
-    						}    					    
-    					    
-    					} else {
-    						LOGGER.info("Unable to get UUID of the parent network because the pav:retrievedFrom property is missing from provenance of target network " + 
-    							     targetCandidate.getExternalId());
-    							
-    						break; // break out of the loop
-    					}
-					}
-					inputs = inputs.get(0).getCreationEvent().getInputs();
-				}
+    	    	// calculate earliestTargetDate as the earlier of modification date and the last provenance history event end date for the target network.
+    	    	Timestamp earliestTargetDate = 
+    	    			(targetCandidate.getModificationTime().before((Timestamp)targetProvenanceEvent.getEndedAtTime())) ?
+    	    			targetCandidate.getModificationTime() : ((Timestamp) targetProvenanceEvent.getEndedAtTime());
+
+    	    	// System.out.println("sourceNetwork.getModificationTime()=" + sourceNetwork.getModificationTime() + "   " +
+    	    	// 		" (Timestamp)sEvent.getEndedAtTime()=" + (Timestamp)sourceProvenanceEvent.getEndedAtTime());	
+    	    	    		
+    	    	// System.out.println("targetCandidate.getModificationTime()=" + targetCandidate.getModificationTime() + "   " +
+    	    	//		" pEvent.getEndedAtTime()=" + (Timestamp) targetProvenanceEvent.getEndedAtTime());	
+    	    		
+    	    	//System.out.println("latestSourceDate=" + latestSourceDate.toString() + "   earliestTargetDate= " + earliestTargetDate.toString() );
+    	    				
+                if (latestSourceDate.before(earliestTargetDate)) {
+                    // target network update/modify time is more recent than that of source network;  don't update target,
+                	// we may need to copy source network to target server
+                    LOGGER.info("latestSourceDate = " + latestSourceDate.toString() + 
+                    		";  earliestTargetDate =  " + earliestTargetDate.toString() + ". Not updating target.");
+                    	
+                   	// since there exists a copy of the source network on the target server that doesn't require updating,
+                   	// we will not copy this source network to target.
+                    copySourceNetwork = false;
+                    	
+                    continue;  // get next target network
+                }
+
+                // let's check if the target network is read-only, and if yes, check the value of updateReadOnlyNetwork 
+                // configuration parameter.  To check if target is read-only, if (targetCandidate.getReadOnlyCommitId() > 0).
+                    
+    	    	if ((targetCandidate.getReadOnlyCommitId() > 0) && (false == updateReadOnlyNetwork)) {
+    	     	   // the target is read-only and updateReadOnlyNetwork config parameter is false, don't update target
+    				LOGGER.info("Target network " + targetCandidate.getExternalId() + " is read-only and updateReadOnlyNetwork is false. Not updating target and not copying to target.");
+                    	
+    				copySourceNetwork = false;             	
+                    continue;  // get next target network
+    	    	}
+    				
+    	    	// finally, update the target network
+    	    	if (targetCandidate.getReadOnlyCommitId() > 0) {
+    	    		// target network is read-only
+    	    		updateReadOnlyNetwork(sourceNetwork, targetCandidate);
+    	    		copySourceNetwork = false;
+    	    	} else {
+    	    		// target network is not read-only
+    	    		updateNetwork(sourceNetwork, targetCandidate);
+    	    		copySourceNetwork = false;
+    	    	}
+    	    		
+			} else {  // if ((pRoot.getProperties() != null) && (pRoot.getProperties().size() >= 3) )
+				
+				LOGGER.info("Unable to get UUID of the parent network because the pav:retrievedFrom property is missing from provenance of target network " + 
+				     targetCandidate.getExternalId());		
+				continue;  // get next target network
 			}
 		}
 		
