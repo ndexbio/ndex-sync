@@ -49,8 +49,9 @@ public class CommandProcessor {
 				System.out.println("NDEx Copier requires a directory of copy plans as an argument");
 			} else {
 				if (args.length == 2){
-					if (args[1].toLowerCase() == "cx"){
+					if (args[1].toLowerCase().equals("cx")){
 						cxMode = true;
+						System.out.println("Running in CX Mode ");
 					} else {
 						System.out.println("Expecting either 'cx' or no second argument, instead got " + args[1]);
 					}

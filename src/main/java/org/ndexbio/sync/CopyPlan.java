@@ -484,7 +484,7 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 			long lElapsedTime = lEndTime - lStartTime;
 			// TODO create updated provenance history
 			NetworkSummary copiedNetwork = target.getNdex().getNetworkSummaryById(copiedNetworkId.toString());
-			LOGGER.info("Copied " + sourceNetwork.getExternalId() + " to " + copiedNetwork.getExternalId() + " in " + lElapsedTime/1000 + " seconds");
+			LOGGER.info("Copied (via CX) " + sourceNetwork.getExternalId() + " to " + copiedNetwork.getExternalId() + " in " + lElapsedTime/1000 + " seconds");
 			ProvenanceEntity newProvananceHistory = createCopyProvenance(copiedNetwork, sourceNetwork);
 			target.getNdex().setNetworkProvenance(copiedNetwork.getExternalId().toString(), newProvananceHistory);
 			LOGGER.info("Set provenance for copy " + copiedNetwork.getExternalId());
