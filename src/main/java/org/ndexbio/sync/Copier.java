@@ -41,11 +41,12 @@ public class Copier {
 
     private List<CopyPlan> plans = new ArrayList<>();
     
-    public void runPlans(String directoryString){
+    
+    public void runPlans(String directoryString, Boolean cxMode){
     	
     	LOGGER.info("Starting Copy Session");
     	if (readCopyPlans(directoryString)){
-    		processCopyPlans();
+    		processCopyPlans(cxMode);
     	}
     	LOGGER.info("Finishing Copy Session");
     	
@@ -80,7 +81,7 @@ public class Copier {
 	}
 	
 	// 
-	private void processCopyPlans(){
+	private void processCopyPlans(Boolean cxMode){
 		System.out.println("Processing Copy Plans");
 		for (CopyPlan plan : this.plans){
 			try {
@@ -89,7 +90,7 @@ public class Copier {
 				LOGGER.info("  Source: " + plan.getSource().getRoute() + "  username: " + plan.getSource().getUsername());
 				LOGGER.info("  Target: " + plan.getTarget().getRoute() + "  username: " + plan.getTarget().getUsername());
 				
-				plan.process();
+				plan.process(cxMode);
 				
 			} catch (Exception e) {
 				// TODO Auto-generated catch block
@@ -190,6 +191,12 @@ public class Copier {
     			
     }
 */
+
+
+	public void setMode(String string) {
+		// TODO Auto-generated method stub
+		
+	}
 
 
 }

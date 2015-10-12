@@ -43,11 +43,19 @@ public class CommandProcessor {
 		// expects one argument - a directory in which to find the copy plans
 		//CommandProcessor cp = new CommandProcessor();
 		Copier copier = new Copier();
+		Boolean cxMode = false;
 		try {
 			if (args.length == 0) {
 				System.out.println("NDEx Copier requires a directory of copy plans as an argument");
 			} else {
-				copier.runPlans(args[0]);
+				if (args.length == 2){
+					if (args[1].toLowerCase() == "cx"){
+						cxMode = true;
+					} else {
+						System.out.println("Expecting either 'cx' or no second argument, instead got " + args[1]);
+					}
+				}
+				copier.runPlans(args[0], cxMode);
 			}
 		} catch (IllegalArgumentException e) {
 			// TODO Auto-generated catch block

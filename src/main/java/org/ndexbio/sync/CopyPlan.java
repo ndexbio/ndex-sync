@@ -31,6 +31,7 @@
 package org.ndexbio.sync;
 
 import java.io.IOException;
+import java.io.InputStream;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.sql.Timestamp;
@@ -77,7 +78,7 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 	boolean updateTargetNetwork = false;
 	boolean updateReadOnlyNetwork = false;	
 
-	public void process() throws JsonProcessingException, IOException, NdexException {
+	public void process(boolean cxMode) throws JsonProcessingException, IOException, NdexException {
 		source.initialize();
 		target.initialize();
 		provenanceMap = new HashMap<>();
@@ -94,11 +95,10 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 		} else {
 			// copy source network(s) from source server to target
 		    for (NetworkSummary network: sourceNetworks) {
-			    copySourceNetwork(network);
+			    copySourceNetwork(network, cxMode);
 		    }
 		}
 	}
-	
 
 
 	// Find networks in target NDEx in the target account.
@@ -373,7 +373,7 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 	
 	// Process one source network
 	//
-	private void copySourceNetwork(NetworkSummary sourceNetwork) throws JsonProcessingException, IOException, NdexException {
+	private void copySourceNetwork(NetworkSummary sourceNetwork, Boolean cxMode) throws JsonProcessingException, IOException, NdexException {
 		LOGGER.info("Processing source network " + sourceNetwork.getName() + " last modified " + sourceNetwork.getModificationTime());
 		
 		// Get the provenance history of the source from the provenance map
@@ -448,16 +448,43 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 		} else {
 			// no target found, copy network
 			LOGGER.info("No target that is a copy of the source found, will therefore copy the network ");
-			copyNetwork(sourceNetwork);
+			if (cxMode == true){
+				copyNetworkAsCX(sourceNetwork);
+			} else {
+				copyNetwork(sourceNetwork);
+			}
 		}
 	}
 	
 	private void copyNetwork(NetworkSummary sourceNetwork) throws IOException, NdexException{
-		Network entireNetwork = source.getNdex().getNetwork(sourceNetwork.getExternalId().toString());
+		
 		try {
 			// TODO create updated provenance history
+			Network entireNetwork = source.getNdex().getNetwork(sourceNetwork.getExternalId().toString());
+			long lStartTime = System.currentTimeMillis();
 			NetworkSummary copiedNetwork = target.getNdex().createNetwork(entireNetwork);
-			LOGGER.info("Copied " + sourceNetwork.getExternalId() + " to " + copiedNetwork.getExternalId());
+			long lEndTime = System.currentTimeMillis();
+			long lElapsedTime = lEndTime - lStartTime;
+			LOGGER.info("Copied " + sourceNetwork.getExternalId() + " to " + copiedNetwork.getExternalId()  + " in " + lElapsedTime/1000 + " seconds");
+			ProvenanceEntity newProvananceHistory = createCopyProvenance(copiedNetwork, sourceNetwork);
+			target.getNdex().setNetworkProvenance(copiedNetwork.getExternalId().toString(), newProvananceHistory);
+			LOGGER.info("Set provenance for copy " + copiedNetwork.getExternalId());
+		} catch (Exception e) {
+			LOGGER.severe("Error attempting to copy " + sourceNetwork.getExternalId());
+			e.printStackTrace();
+		}
+	}
+	
+	private void copyNetworkAsCX(NetworkSummary sourceNetwork) throws IOException, NdexException{
+		try {
+			long lStartTime = System.currentTimeMillis();
+			InputStream inStream = source.getNdex().getNetworkAsCXStream(sourceNetwork.getExternalId().toString());
+			UUID copiedNetworkId = target.getNdex().createCXNetwork(inStream);
+			long lEndTime = System.currentTimeMillis();
+			long lElapsedTime = lEndTime - lStartTime;
+			// TODO create updated provenance history
+			NetworkSummary copiedNetwork = target.getNdex().getNetworkSummaryById(copiedNetworkId.toString());
+			LOGGER.info("Copied " + sourceNetwork.getExternalId() + " to " + copiedNetwork.getExternalId() + " in " + lElapsedTime/1000 + " seconds");
 			ProvenanceEntity newProvananceHistory = createCopyProvenance(copiedNetwork, sourceNetwork);
 			target.getNdex().setNetworkProvenance(copiedNetwork.getExternalId().toString(), newProvananceHistory);
 			LOGGER.info("Set provenance for copy " + copiedNetwork.getExternalId());
