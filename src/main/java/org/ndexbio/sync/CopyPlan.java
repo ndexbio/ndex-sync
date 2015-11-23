@@ -90,7 +90,7 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 		if (updateTargetNetwork) {
 			// update network(s) on the target server
 		    for (NetworkSummary network: sourceNetworks) {
-			    updateTargetNetwork(network);
+			    updateTargetNetwork(network, cxMode);
 		    }
 		} else {
 			// copy source network(s) from source server to target
@@ -161,7 +161,7 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 
 	// Process one source network
 	//
-	private void updateTargetNetwork(NetworkSummary sourceNetwork) throws JsonProcessingException, IOException, NdexException {
+	private void updateTargetNetwork(NetworkSummary sourceNetwork, boolean cxMode) throws JsonProcessingException, IOException, NdexException {
 		LOGGER.info("Trying to update target network created from source " + sourceNetwork.getName() + " ; source last modified " + sourceNetwork.getModificationTime());
 		
 		// for targetCandidate, get provenance history and determine whether the target candidate
@@ -301,11 +301,22 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
     	    	// finally, update the target network
     	    	if (targetCandidate.getReadOnlyCommitId() > 0) {
     	    		// target network is read-only
+					if( cxMode == true){
+						updateReadonlyNetworkAsCX(sourceNetwork, targetCandidate);
+					} else {
+						updateReadOnlyNetwork(sourceNetwork, targetCandidate);
+					}
     	    		updateReadOnlyNetwork(sourceNetwork, targetCandidate);
     	    		copySourceNetwork = false;
     	    	} else {
     	    		// target network is not read-only
-    	    		updateNetwork(sourceNetwork, targetCandidate);
+					if (cxMode == true){
+						updateNetworkAsCX(sourceNetwork, targetCandidate);
+					} else {
+						updateNetwork(sourceNetwork, targetCandidate);
+					}
+
+
     	    		copySourceNetwork = false;
     	    	}
     	    		
@@ -325,7 +336,35 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 			copySourceNetwork = false; 
 		}
 	}
-	
+
+	private void updateNetworkAsCX(NetworkSummary sourceNetwork, NetworkSummary targetNetwork)
+	{
+		try
+		{
+			InputStream cxStream = source.getNdex().getNetworkAsCXStream(sourceNetwork.getExternalId().toString());
+			target.getNdex().updateCXNetwork(targetNetwork.getExternalId(), cxStream);
+		}
+		catch (Exception e)
+		{
+			LOGGER.severe("Error attempting to update as cx " + sourceNetwork.getExternalId());
+			e.printStackTrace();
+		}
+	}
+
+	private void updateReadonlyNetworkAsCX(NetworkSummary sourceNetwork, NetworkSummary targetNetwork)
+	{
+		try
+		{
+			InputStream cxStream = source.getNdex().getNetworkAsCXStream(sourceNetwork.getExternalId().toString());
+			target.getNdex().updateCXNetwork(targetNetwork.getExternalId(), cxStream);
+		}
+		catch (Exception e)
+		{
+			LOGGER.severe("Error attempting to update as cx " + sourceNetwork.getExternalId());
+			e.printStackTrace();
+		}
+	}
+
 	private void updateReadOnlyNetwork(NetworkSummary sourceNetwork, NetworkSummary targetNetwork) throws IOException, NdexException {
 		
 		String networkId = targetNetwork.getExternalId().toString();
@@ -440,8 +479,12 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 		if (null != targetNetwork){
 			if (targetNetworkNeedsUpdate){
 				// overwrite target
-				LOGGER.info("We have a target that is a copy needing update, but update is not implemented yet, so just making another copy.");
-				copyNetwork(sourceNetwork);
+				LOGGER.info("We have a target that is a copy needing update, but updateTargetNetwork is false, so just making another copy.");
+				if (cxMode == true){
+					copyNetworkAsCX(sourceNetwork);
+				} else {
+					copyNetwork(sourceNetwork);
+				}
 			} else {
 				LOGGER.info("We have a target that is an existing copy, but it does not need update, therefore not copying.");
 			}

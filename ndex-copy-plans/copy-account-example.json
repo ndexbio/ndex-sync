@@ -1,20 +1,18 @@
 {
-	"planType" : "QueryCopyPlan",
-	
-	"source" : {
-			"route" : "http://www.ndexbio.org/rest",
-			"username" : "dexterpratt",
-			"password" : "carbluegreen"
-			},
-	
-	"target" : {
-			"route" : "http://localhost:8080/ndexbio-rest",
-			"username" : "doom",
-			"password" : "doom"
-
-			},
-			
-	"queryString" : "Steroid",
-	"queryLimit" : "10",
-	"queryAccountName" : "dexterpratt"
+  "planType" : "QueryCopyPlan",
+  "source" : {
+	"route" : "http://dev.ndexbio.org/rest",
+	"username" : "test",
+	"password" : "test"
+  },
+  "target" : {
+	"route" : "http://dev2.ndexbio.org/rest",
+	"username" : "test2",
+	"password" : "test2"
+  },
+  "queryString" : "*",
+  "queryLimit" : "10",
+  "queryAccountName" : "test",
+  "updateTargetNetwork" : "true",
+  "updateReadOnlyNetwork" : "false"
 }
