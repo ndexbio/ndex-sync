@@ -343,6 +343,10 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 		{
 			InputStream cxStream = source.getNdex().getNetworkAsCXStream(sourceNetwork.getExternalId().toString());
 			target.getNdex().updateCXNetwork(targetNetwork.getExternalId(), cxStream);
+			LOGGER.info("Updated " + sourceNetwork.getExternalId() + " to " + targetNetwork.getExternalId());
+			ProvenanceEntity newProvananceHistory = createCopyProvenance(targetNetwork, sourceNetwork);
+			target.getNdex().setNetworkProvenance(targetNetwork.getExternalId().toString(), newProvananceHistory);
+			LOGGER.info("Set provenance for copy " + targetNetwork.getExternalId());
 		}
 		catch (Exception e)
 		{
@@ -353,14 +357,23 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 
 	private void updateReadonlyNetworkAsCX(NetworkSummary sourceNetwork, NetworkSummary targetNetwork)
 	{
-		try
-		{
-			InputStream cxStream = source.getNdex().getNetworkAsCXStream(sourceNetwork.getExternalId().toString());
-			target.getNdex().updateCXNetwork(targetNetwork.getExternalId(), cxStream);
+		String networkId = targetNetwork.getExternalId().toString();
+
+		try {
+			// set target network to read-write mode
+			target.getNdex().setNetworkFlag(networkId, "readOnly", "false");
+		} catch (Exception e) {
+			LOGGER.severe("Error attempting  to set readOnly flag to false for network " + sourceNetwork.getExternalId());
+			e.printStackTrace();
 		}
-		catch (Exception e)
-		{
-			LOGGER.severe("Error attempting to update as cx " + sourceNetwork.getExternalId());
+
+		updateReadonlyNetworkAsCX(sourceNetwork, targetNetwork);
+
+		try {
+			// set target network back to read-only mode
+			target.getNdex().setNetworkFlag(networkId, "readOnly", "true");
+		} catch (Exception e) {
+			LOGGER.severe("Error attempting  to set readOnly flag to true for network " + sourceNetwork.getExternalId());
 			e.printStackTrace();
 		}
 	}

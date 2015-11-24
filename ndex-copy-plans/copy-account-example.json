@@ -1,9 +1,9 @@
 {
   "planType" : "QueryCopyPlan",
   "source" : {
-	"route" : "http://dev.ndexbio.org/rest",
-	"username" : "test",
-	"password" : "test"
+	"route" : "http://dev2.ndexbio.org/rest",
+	"username" : "test3",
+	"password" : "test3"
   },
   "target" : {
 	"route" : "http://dev2.ndexbio.org/rest",
@@ -12,7 +12,7 @@
   },
   "queryString" : "*",
   "queryLimit" : "10",
-  "queryAccountName" : "test",
+  "queryAccountName" : "test3",
   "updateTargetNetwork" : "true",
-  "updateReadOnlyNetwork" : "false"
+  "updateReadOnlyNetwork" : "true"
 }
