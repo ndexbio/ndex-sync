@@ -306,7 +306,6 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 					} else {
 						updateReadOnlyNetwork(sourceNetwork, targetCandidate);
 					}
-    	    		updateReadOnlyNetwork(sourceNetwork, targetCandidate);
     	    		copySourceNetwork = false;
     	    	} else {
     	    		// target network is not read-only
@@ -315,7 +314,6 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 					} else {
 						updateNetwork(sourceNetwork, targetCandidate);
 					}
-
 
     	    		copySourceNetwork = false;
     	    	}
@@ -367,7 +365,7 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 			e.printStackTrace();
 		}
 
-		updateReadonlyNetworkAsCX(sourceNetwork, targetNetwork);
+		updateNetworkAsCX(sourceNetwork, targetNetwork);
 
 		try {
 			// set target network back to read-only mode
