@@ -57,7 +57,7 @@ public class CopyPlanReader {
 		if (null == files) throw new Exception("Directory with copy plans not found");
 
 		for (final File fileEntry : directory.listFiles()) {
-			if (fileEntry.isFile()) {
+			if (fileEntry.isFile() && fileEntry.getName().endsWith("json")) {
 				try {
 					CopyPlan plan = objectMapper.readValue(
 							fileEntry, CopyPlan.class);

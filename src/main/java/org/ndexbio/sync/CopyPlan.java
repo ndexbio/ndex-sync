@@ -330,7 +330,15 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 		// If no copy of the source network exists on the target, then copy source network to target
 		if (copySourceNetwork) {
 			LOGGER.info("No target that is a copy of the source found, will therefore copy the network ");
-			copyNetwork(sourceNetwork);
+			if( cxMode )
+				copyNetworkAsCX(sourceNetwork);
+			else
+
+
+
+
+
+				copyNetwork(sourceNetwork);
 			copySourceNetwork = false; 
 		}
 	}
