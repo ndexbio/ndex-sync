@@ -1,14 +1,12 @@
 {
-  "planType" : "QueryCopyPlan",
+  "planType" : "IdCopyPlan",
   "source" :
-  { "route" : "http://dev2.ndexbio.org/rest", "username" : "test2", "password" : "test2" }
+  { "route" : "http://public.ndexbio.org/rest", "username" : "lhicks", "password" : "ndex" }
 ,
   "target" :
-  { "route" : "http://dev2.ndexbio.org/rest", "username" : "test", "password" : "test" }
+  { "route" : "http://dev2.ndexbio.org/rest", "username" : "test", "password" : "ndex" }
 ,
-  "queryString" : "*",
-  "queryLimit" : "10",
-  "queryAccountName" : "test2",
-  "updateTargetNetwork" : "true",
-  "updateReadOnlyNetwork" : "true"
+  "idList" : [
+    "52e4b4c3-08ae-11e5-ac0f-000c29cb28fb"
+  ]
 }

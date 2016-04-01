@@ -108,7 +108,7 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 	//        the number of networks queried is limited to 100
 	//
 	private void findTargetCandidates() throws JsonProcessingException, IOException {
-		targetCandidates = target.getNdex().findNetworks("", true, target.getUsername(), Permissions.ADMIN, false, 0, 100);
+		targetCandidates = target.getNdex().findNetworks("", true, target.getUsername(), Permissions.WRITE, false, 0, 100);
 		LOGGER.info("Found " + targetCandidates.size() + " networks in target NDEx under  " + target.getUsername());
 	}
 
