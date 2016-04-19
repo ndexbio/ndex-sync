@@ -56,7 +56,10 @@ public class QueryCopyPlan extends CopyPlan {
 		System.out.println("finding up to " + queryLimit 
 				+ " source networks by query '" + queryString + "' with accountName " + queryAccountName);
 		try {
-			sourceNetworks = this.source.ndex.findNetworks(queryString, true, queryAccountName, Permissions.WRITE, false, 0, queryLimit);
+			Permissions permissions = Permissions.WRITE;
+			if( queryAccountName != null )
+				permissions = null;
+			sourceNetworks = this.source.ndex.findNetworks(queryString, true, queryAccountName, permissions, false, 0, queryLimit);
 			LOGGER.info("Found " + sourceNetworks.size() + " networks");
 		} catch (IOException e) {
 			LOGGER.severe("Error while finding source networks: " + e.getMessage());
