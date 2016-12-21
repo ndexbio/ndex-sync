@@ -67,7 +67,7 @@ public class CopyPlanReader {
 					System.out.println("Error parsing : "
 							+ fileEntry.getName() + " ->  "
 							+ e.getMessage());
-
+					throw e;
 				}
 			} else {
 				System.out.println("Skipping: " + fileEntry.getName());

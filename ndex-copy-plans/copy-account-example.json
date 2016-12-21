@@ -1,13 +1,14 @@
 {
   "planType" : "QueryCopyPlan",
-
-  "source" : { "route" : "http://public.ndexbio.org/rest", "username" : "test", "password" : "ndex" },
-
-  "target" : { "route" : "http://dev.ndexbio.org/rest", "username" : "test", "password" : "test" },
-
-  "queryString" : "*",
-  "queryLimit" : "1000",
+  "source" :
+  { "route" : "http://public.ndexbio.org/rest", "username" : "cjtest", "password" : "guilan" }
+,
+  "target" :
+  { "route" : "http://localhost:8080/ndexbio-rest", "username" : "cjtest", "password" : "guilan" }
+,
+  "queryString" : "tutorial_template",
+  "queryLimit" : "2",
+  "queryAccountName" : "cjtest",
   "updateTargetNetwork" : "true",
-  "updateReadOnlyNetwork" : "true",
-  "queryAccountName" : "dip"
+  "updateReadOnlyNetwork" : "false"
 }

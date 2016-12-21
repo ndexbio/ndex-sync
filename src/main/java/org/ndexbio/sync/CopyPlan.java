@@ -48,7 +48,6 @@ import org.ndexbio.model.object.NdexProvenanceEventType;
 import org.ndexbio.model.object.Permissions;
 import org.ndexbio.model.object.ProvenanceEntity;
 import org.ndexbio.model.object.ProvenanceEvent;
-import org.ndexbio.model.object.Request;
 import org.ndexbio.model.object.network.Network;
 import org.ndexbio.model.object.network.NetworkSummary;
 import org.ndexbio.model.tools.PropertyHelpers;
@@ -56,9 +55,10 @@ import org.ndexbio.model.tools.ProvenanceHelpers;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonSubTypes;
-import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.annotation.JsonSubTypes.Type;
+import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @JsonTypeInfo(use = JsonTypeInfo.Id.NAME, include = JsonTypeInfo.As.PROPERTY, property = "planType")
@@ -73,15 +73,19 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 	String planFileName;
 	List<NetworkSummary> sourceNetworks;
 	List<NetworkSummary> targetCandidates;
-	Map<String, ProvenanceEntity> provenanceMap;
+	Map<UUID, ProvenanceEntity> srcProvenanceMap;
+	Map<UUID, ProvenanceEntity> tgtProvenanceMap;
 	
 	boolean updateTargetNetwork = false;
 	boolean updateReadOnlyNetwork = false;	
 
-	public void process(boolean cxMode) throws JsonProcessingException, IOException, NdexException {
+	public void process() throws JsonProcessingException, IOException, NdexException {
 		source.initialize();
 		target.initialize();
-		provenanceMap = new HashMap<>();
+		if ( !target.getVersion().equals("2.0"))
+			throw new NdexException ("This version only supports NDEx version 2.0 server as the target.");
+		srcProvenanceMap = new HashMap<>();
+		tgtProvenanceMap = new HashMap<> ();
 		findSourceNetworks();
 		getAllSourceProvenance();
 		findTargetCandidates();
@@ -90,12 +94,12 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 		if (updateTargetNetwork) {
 			// update network(s) on the target server
 		    for (NetworkSummary network: sourceNetworks) {
-			    updateTargetNetwork(network, cxMode);
+			    updateTargetNetwork(network);
 		    }
 		} else {
 			// copy source network(s) from source server to target
 		    for (NetworkSummary network: sourceNetworks) {
-			    copySourceNetwork(network, cxMode);
+			    copySourceNetwork(network);
 		    }
 		}
 	}
@@ -108,30 +112,30 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 	//        the number of networks queried is limited to 100
 	//
 	private void findTargetCandidates() throws JsonProcessingException, IOException {
-		targetCandidates = target.getNdex().findNetworks("", true, target.getUsername(), Permissions.WRITE, false, 0, 100);
+		targetCandidates = target.getNdex().findNetworks("", true, target.getUsername(), null, false, 0, 10000);
 		LOGGER.info("Found " + targetCandidates.size() + " networks in target NDEx under  " + target.getUsername());
 	}
 
-	public abstract void findSourceNetworks() throws NdexException;
+	public abstract void findSourceNetworks() throws NdexException, IOException;
 
 	// Get the provenance history for each candidate network in the target account
 	//
 	private void getAllTargetProvenance() throws JsonProcessingException, IOException, NdexException {
 		LOGGER.info("Getting provenance history for " + targetCandidates.size() + " candidate networks in target account");
-		getAllProvenance(target, targetCandidates);
+		getAllProvenance(target, targetCandidates, tgtProvenanceMap);
 	}
 
 	// Get the provenance history for each source network
 	//
 	private void getAllSourceProvenance() throws JsonProcessingException, IOException, NdexException {
 		LOGGER.info("Getting Source Network Provenance for " + sourceNetworks.size() + " networks");
-		getAllProvenance(source, sourceNetworks);
+		getAllProvenance(source, sourceNetworks, srcProvenanceMap);
 	}
 	
 	// Get the provenance history for a list of networks
 	// Store by UUID in the provenance map
 	//
-	private void getAllProvenance(NdexServer server, List<NetworkSummary> networks) { //throws JsonProcessingException, IOException, NdexException{
+	private void getAllProvenance(NdexServer server, List<NetworkSummary> networks, Map<UUID, ProvenanceEntity> provenanceMap) { //throws JsonProcessingException, IOException, NdexException{
 		
 		ArrayList<NetworkSummary> networksNotToCopy = new ArrayList<NetworkSummary>();
 		
@@ -140,7 +144,7 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 			    ProvenanceEntity provenance = server.getNdex().getNetworkProvenance(network.getExternalId().toString());
 			    if (null != provenance) {
 			    	LOGGER.info("Storing Provenance for network " + network.getExternalId());
-				    provenanceMap.put(network.getExternalId().toString(), provenance);
+				    provenanceMap.put(network.getExternalId(), provenance);
 			    }
 			} catch (IOException | NdexException e) {
 				// unable to read this networks' provenance.  It means we won't be able to copy/update it.
@@ -161,7 +165,7 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 
 	// Process one source network
 	//
-	private void updateTargetNetwork(NetworkSummary sourceNetwork, boolean cxMode) throws JsonProcessingException, IOException, NdexException {
+	private void updateTargetNetwork(NetworkSummary sourceNetwork) throws JsonProcessingException, IOException, NdexException {
 		LOGGER.info("Trying to update target network created from source " + sourceNetwork.getName() + " ; source last modified " + sourceNetwork.getModificationTime());
 		
 		// for targetCandidate, get provenance history and determine whether the target candidate
@@ -174,14 +178,14 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 		String parentEntityUri   = null;
 		
 		// Get the provenance history of the source from the provenance map
-		ProvenanceEntity sourceRootProvenanceEntity = provenanceMap.get(sourceNetwork.getExternalId().toString());
+		ProvenanceEntity sourceRootProvenanceEntity = srcProvenanceMap.get(sourceNetwork.getExternalId());
 		
 		// Evaluate all targetCandidates to see if there is an existing copy of the source
 		// and whether that copy needs update
 		for (NetworkSummary targetCandidate : targetCandidates) {
 			
 			// get provenance of the target network from the server
-			ProvenanceEntity targetRootProvenanceEntity = provenanceMap.get(targetCandidate.getExternalId().toString());
+			ProvenanceEntity targetRootProvenanceEntity = tgtProvenanceMap.get(targetCandidate.getExternalId());
 			
 			if (null == targetRootProvenanceEntity){
 				// no provenance root entity, hence unknown status
@@ -251,7 +255,7 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 					continue;   // get next target network
 				}
 					
-    			LOGGER.info("sourceNetworkUUID " + sourceNetworkUUID + " equals parentNetworkUUID " + parentNetworkUUID);
+    	//		LOGGER.info("sourceNetworkUUID " + sourceNetworkUUID + " equals parentNetworkUUID " + parentNetworkUUID);
     				
                 // target network was created from source network and was not modified after that (last target event was COPY).
 			    // Let's check if target network is "out-of-date".
@@ -299,21 +303,16 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
     	    	}
     				
     	    	// finally, update the target network
-    	    	if (targetCandidate.getReadOnlyCommitId() > 0) {
+    	    	System.out.println("Updating network " + sourceNetwork.getExternalId() + "(source) -> " + targetCandidate.getExternalId() + "(target)");
+    	    	if (target.isReadOnly(targetCandidate.getExternalId())) {
     	    		// target network is read-only
-					if( cxMode == true){
-						updateReadonlyNetworkAsCX(sourceNetwork, targetCandidate);
-					} else {
-						updateReadOnlyNetwork(sourceNetwork, targetCandidate);
-					}
+					updateReadonlyNetworkAsCX(sourceNetwork, targetCandidate);
+					
     	    		copySourceNetwork = false;
     	    	} else {
     	    		// target network is not read-only
-					if (cxMode == true){
 						updateNetworkAsCX(sourceNetwork, targetCandidate);
-					} else {
-						updateNetwork(sourceNetwork, targetCandidate);
-					}
+					
 
     	    		copySourceNetwork = false;
     	    	}
@@ -330,15 +329,8 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 		// If no copy of the source network exists on the target, then copy source network to target
 		if (copySourceNetwork) {
 			LOGGER.info("No target that is a copy of the source found, will therefore copy the network ");
-			if( cxMode )
-				copyNetworkAsCX(sourceNetwork);
-			else
+			copyNetworkAsCX(sourceNetwork);
 
-
-
-
-
-				copyNetwork(sourceNetwork);
 			copySourceNetwork = false; 
 		}
 	}
@@ -350,8 +342,17 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 			InputStream cxStream = source.getNdex().getNetworkAsCXStream(sourceNetwork.getExternalId().toString());
 			target.getNdex().updateCXNetwork(targetNetwork.getExternalId(), cxStream);
 			LOGGER.info("Updated " + sourceNetwork.getExternalId() + " to " + targetNetwork.getExternalId());
+			while ( ! target.finishedLoading(targetNetwork.getExternalId())) {
+				System.out.println("Waiting for this network to be validated by NDEx server.");
+				Thread.sleep(3000);
+			}
 			ProvenanceEntity newProvananceHistory = createCopyProvenance(targetNetwork, sourceNetwork);
-			target.getNdex().setNetworkProvenance(targetNetwork.getExternalId().toString(), newProvananceHistory);
+
+			ObjectMapper mapper = new ObjectMapper();
+			String s0 = mapper.writeValueAsString( newProvananceHistory);
+//			System.out.print("\n\n" + s0 + "\n\n");
+
+			target.setNetworkProvenance(targetNetwork.getExternalId(), newProvananceHistory);
 			LOGGER.info("Set provenance for copy " + targetNetwork.getExternalId());
 		}
 		catch (Exception e)
@@ -384,7 +385,7 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 		}
 	}
 
-	private void updateReadOnlyNetwork(NetworkSummary sourceNetwork, NetworkSummary targetNetwork) throws IOException, NdexException {
+/*	private void updateReadOnlyNetwork(NetworkSummary sourceNetwork, NetworkSummary targetNetwork) throws IOException, NdexException {
 		
 		String networkId = targetNetwork.getExternalId().toString();
 
@@ -406,9 +407,9 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 			LOGGER.severe("Error attempting  to set readOnly flag to true for network " + sourceNetwork.getExternalId());
 			e.printStackTrace();			
 		}
-	}
+	}*/
 	
-	private void updateNetwork(NetworkSummary sourceNetwork, NetworkSummary targetNetwork) throws IOException, NdexException {
+/*	private void updateNetwork(NetworkSummary sourceNetwork, NetworkSummary targetNetwork) throws IOException, NdexException {
 		
 		Network entireNetwork = source.getNdex().getNetwork(sourceNetwork.getExternalId().toString());
 		
@@ -427,15 +428,15 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 			LOGGER.severe("Error attempting to copy " + sourceNetwork.getExternalId());
 			e.printStackTrace();
 		}
-	}
+	} */
 	
 	// Process one source network
 	//
-	private void copySourceNetwork(NetworkSummary sourceNetwork, Boolean cxMode) throws JsonProcessingException, IOException, NdexException {
+	private void copySourceNetwork(NetworkSummary sourceNetwork) throws JsonProcessingException, IOException, NdexException {
 		LOGGER.info("Processing source network " + sourceNetwork.getName() + " last modified " + sourceNetwork.getModificationTime());
 		
 		// Get the provenance history of the source from the provenance map
-		ProvenanceEntity sRoot = provenanceMap.get(sourceNetwork.getExternalId().toString());
+		ProvenanceEntity sRoot = srcProvenanceMap.get(sourceNetwork.getExternalId());
 		
 		// for targetCandidate, get provenance history and determine whether the target candidate
 		// is a first generation copy of the source network.
@@ -446,7 +447,7 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 		// Evaluate all targetCandidates to see if there is an existing copy of the source
 		// and whether that copy needs update
 		for (NetworkSummary targetCandidate : targetCandidates){
-			ProvenanceEntity pRoot = provenanceMap.get(targetCandidate.getExternalId().toString());
+			ProvenanceEntity pRoot = tgtProvenanceMap.get(targetCandidate.getExternalId().toString());
 			
 			if (null == pRoot){
 				// no provenance root entity, hence unknown status
@@ -499,26 +500,19 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 			if (targetNetworkNeedsUpdate){
 				// overwrite target
 				LOGGER.info("We have a target that is a copy needing update, but updateTargetNetwork is false, so just making another copy.");
-				if (cxMode == true){
-					copyNetworkAsCX(sourceNetwork);
-				} else {
-					copyNetwork(sourceNetwork);
-				}
+				copyNetworkAsCX(sourceNetwork);
+
 			} else {
 				LOGGER.info("We have a target that is an existing copy, but it does not need update, therefore not copying.");
 			}
 		} else {
 			// no target found, copy network
 			LOGGER.info("No target that is a copy of the source found, will therefore copy the network ");
-			if (cxMode == true){
 				copyNetworkAsCX(sourceNetwork);
-			} else {
-				copyNetwork(sourceNetwork);
-			}
 		}
 	}
 	
-	private void copyNetwork(NetworkSummary sourceNetwork) throws IOException, NdexException{
+/*	private void copyNetwork(NetworkSummary sourceNetwork) throws IOException, NdexException{
 		
 		try {
 			// TODO create updated provenance history
@@ -535,7 +529,7 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 			LOGGER.severe("Error attempting to copy " + sourceNetwork.getExternalId());
 			e.printStackTrace();
 		}
-	}
+	} */
 	
 	private void copyNetworkAsCX(NetworkSummary sourceNetwork) throws IOException, NdexException{
 		try {
@@ -544,12 +538,22 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 			UUID copiedNetworkId = target.getNdex().createCXNetwork(inStream);
 			long lEndTime = System.currentTimeMillis();
 			long lElapsedTime = lEndTime - lStartTime;
+			while ( ! target.finishedLoading(copiedNetworkId)) {
+				System.out.println("Waiting for this network to be validated by NDEx server.");
+				Thread.sleep(3000);
+			}
 			// TODO create updated provenance history
 			NetworkSummary copiedNetwork = target.getNdex().getNetworkSummaryById(copiedNetworkId.toString());
 			LOGGER.info("Copied (via CX) " + sourceNetwork.getExternalId() + " to " + copiedNetwork.getExternalId() + " in " + lElapsedTime/1000 + " seconds");
+
 			ProvenanceEntity newProvananceHistory = createCopyProvenance(copiedNetwork, sourceNetwork);
-			target.getNdex().setNetworkProvenance(copiedNetwork.getExternalId().toString(), newProvananceHistory);
-			LOGGER.info("Set provenance for copy " + copiedNetwork.getExternalId());
+
+			ObjectMapper mapper = new ObjectMapper();
+			String s0 = mapper.writeValueAsString( newProvananceHistory);
+			System.out.print("\n\n" + s0 + "\n\n");
+
+			target.setNetworkProvenance(copiedNetwork.getExternalId(), newProvananceHistory);
+			
 		} catch (Exception e) {
 			LOGGER.severe("Error attempting to copy " + sourceNetwork.getExternalId());
 			e.printStackTrace();
@@ -561,7 +565,7 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 	private ProvenanceEntity createCopyProvenance(
 			NetworkSummary copiedNetwork,
 			NetworkSummary sourceNetwork) {
-		ProvenanceEntity sourceProvenanceEntity = provenanceMap.get(sourceNetwork.getExternalId().toString());
+		ProvenanceEntity sourceProvenanceEntity = srcProvenanceMap.get(sourceNetwork.getExternalId());
 		
 		// If the source has no provenance history, we create a minimal
 		// ProvenanceEntity that has the appropriate URI

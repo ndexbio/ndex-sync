@@ -43,20 +43,11 @@ public class CommandProcessor {
 		// expects one argument - a directory in which to find the copy plans
 		//CommandProcessor cp = new CommandProcessor();
 		Copier copier = new Copier();
-		Boolean cxMode = true;
 		try {
-			if (args.length == 0) {
-				System.out.println("NDEx Copier requires a directory of copy plans as an argument");
+			if (args.length != 1) {
+				System.out.println("NDEx Copier requires a directory of copy plans as an argument. This version only supports CX.\r\nUsage: CommandProcessor <copyPlanDirectory>");
 			} else {
-				if (args.length == 2){
-					if (args[1].toLowerCase().equals("nocx")){
-						cxMode = false;
-						System.out.println("Running in noCX Mode ");
-					} else {
-						System.out.println("Expecting either 'cx' or no second argument, instead got " + args[1]);
-					}
-				}
-				copier.runPlans(args[0], cxMode);
+				copier.runPlans(args[0]);
 			}
 		} catch (IllegalArgumentException e) {
 			// TODO Auto-generated catch block
@@ -65,7 +56,6 @@ public class CommandProcessor {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
-
 	}
 
 }

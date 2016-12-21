@@ -30,10 +30,17 @@
  */
 package org.ndexbio.sync;
 
+import java.io.IOException;
+import java.util.Map;
+import java.util.UUID;
+
+import org.ndexbio.model.exceptions.NdexException;
+import org.ndexbio.model.object.ProvenanceEntity;
 import org.ndexbio.rest.client.NdexRestClient;
 import org.ndexbio.rest.client.NdexRestClientModelAccessLayer;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.core.JsonProcessingException;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 public class NdexServer {
@@ -44,14 +51,29 @@ public class NdexServer {
 	NdexRestClient client;
 	NdexRestClientModelAccessLayer ndex;
 	
+	String version;
+	
 	public NdexServer() {
 		super();
 
 	}
 	
-	public NdexRestClientModelAccessLayer initialize(){
+	public NdexRestClientModelAccessLayer initialize() throws JsonProcessingException, IOException, NdexException{
 		client = new NdexRestClient(username, password, route);
 		ndex = new NdexRestClientModelAccessLayer(client);
+		
+		Object o = client.getNdexObject("/admin", "/status", Object.class);
+		if ( o == null)
+			throw new NdexException("Failed to get status on server endpoint " + this.route);
+		if ( o instanceof Map) {
+			Map<String,String> props =(Map<String,String>) ((Map<String,Object>)o).get("properties");
+			String v = props.get("ServerVersion");
+			if (v!=null) 
+				version = v;
+			else
+				version = "1.3";
+		} else 
+		  throw new NdexException ("Failed to get version of ndex server. Status object returned was: " + o.toString());
 		return ndex;
 	}
 	
@@ -59,6 +81,10 @@ public class NdexServer {
 		return ndex;
 	}
 	
+	
+	public String getVersion() throws JsonProcessingException, IOException, NdexException {
+		return version;
+	}
 	//____________________________________
 	
 	public String getUsername() {
@@ -82,10 +108,43 @@ public class NdexServer {
 		this.route = route;
 	}
 	
-	
+	public boolean finishedLoading(UUID networkId) throws JsonProcessingException, IOException, NdexException {
+		Map<String, Object> summaryMap = getNetworkSummaryAsMap(networkId);	
+		Boolean b = (Boolean)summaryMap.get("isValid");
+		return b.booleanValue();
+	}
 
+	public boolean isReadOnly(UUID networkId) throws JsonProcessingException, IOException, NdexException {
+		Map<String, Object> summaryMap = getNetworkSummaryAsMap(networkId);	
+		Boolean b = (Boolean)summaryMap.get("isReadOnly");
+		return b.booleanValue();
+	}
+	
+	private Map<String,Object> getNetworkSummaryAsMap(UUID networkId) throws JsonProcessingException, IOException, NdexException {
+		if (! version.equals("2.0"))
+			throw new NdexException("This function only support NDEx 2.0 server.");
+		Object o =client.getNdexObject("/network", "/"+networkId.toString(), Object.class);
+		if ( o == null || !(o instanceof Map)) 
+			throw new NdexException ("Can't get summary of network " + networkId + " on server " + route);
+		Map<String,Object> result = (Map<String,Object>)o;
+		if ( result.get("errorMessage") !=null )
+			throw new NdexException ("Target NDEx server failed to validate network " + networkId);
+		return result;
+	}
 
-	
-	
+	public void setNetworkProvenance(UUID networkId, ProvenanceEntity newProvananceHistory) throws InterruptedException, NdexException {
+		int counter = 0;
+		while (counter < 30) {
+			try {
+				ndex.setNetworkProvenance(networkId.toString(), newProvananceHistory);
+				return ;
+			} catch (IOException e) {
+				System.out.println("Failed to set provenance: " + e.getMessage() + ". Retry in 3 seconds...");
+				Thread.sleep(3000);
+				counter ++;
+			}	
+		}
+		throw new NdexException("Set provenance function timed out after 30 retries.");
+	}
 
 }
