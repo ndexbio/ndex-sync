@@ -31,6 +31,8 @@
 package org.ndexbio.sync;
 
 import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.util.Map;
 import java.util.UUID;
 
@@ -106,6 +108,12 @@ public class NdexServer {
 
 	public void setRoute(String route) {
 		this.route = route;
+	}
+	
+	
+	public String getHostName () throws URISyntaxException { 
+		URI uri = new URI(route);
+	    return uri.getHost();	
 	}
 	
 	public boolean finishedLoading(UUID networkId) throws JsonProcessingException, IOException, NdexException {

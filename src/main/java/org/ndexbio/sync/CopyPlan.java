@@ -210,8 +210,13 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 			// COPY was the latest (most recent) event for the current target;  let's get UUID of the parent network
 				
 			if ((targetRootProvenanceEntity.getProperties() != null) && (targetRootProvenanceEntity.getProperties().size() >= 3) ) {
-				parentEntityUri = targetRootProvenanceEntity.getProperties().get(2).getValue();  // get URI of parent network
+				parentEntityUri = targetRootProvenanceEntity.getProperties().get(2).getValue();  // get URI or UUID of parent network
 	
+				if (parentEntityUri == null) {
+					LOGGER.info("UUID of the parent network from provenance of target network is null");		
+					continue; 
+				}
+					
 				try {
 					//extract UUID from URI
 					URI uri = new URI(parentEntityUri);
@@ -223,10 +228,10 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 						    " is " + parentNetworkUUID);
 						
 				} catch (URISyntaxException e) {
-
-					LOGGER.info("Unable to get UUID of the parent network from provenance of target network " + targetCandidate.getExternalId() 
-							+ "  Exception thrown: " + e.getMessage());		
-					continue;  // get next target network
+					UUID.fromString(parentEntityUri);
+					parentNetworkUUID = parentEntityUri;
+					LOGGER.info("Found UUID of the parent network from provenance of target network " + targetCandidate.getExternalId());		
+					//continue;  // get next target network
 				}
 					
 					
@@ -548,9 +553,9 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 
 			ProvenanceEntity newProvananceHistory = createCopyProvenance(copiedNetwork, sourceNetwork);
 
-			ObjectMapper mapper = new ObjectMapper();
-			String s0 = mapper.writeValueAsString( newProvananceHistory);
-			System.out.print("\n\n" + s0 + "\n\n");
+		//	ObjectMapper mapper = new ObjectMapper();
+		//	String s0 = mapper.writeValueAsString( newProvananceHistory);
+		//	System.out.print("\n\n" + s0 + "\n\n");
 
 			target.setNetworkProvenance(copiedNetwork.getExternalId(), newProvananceHistory);
 			
@@ -564,7 +569,7 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 
 	private ProvenanceEntity createCopyProvenance(
 			NetworkSummary copiedNetwork,
-			NetworkSummary sourceNetwork) {
+			NetworkSummary sourceNetwork) throws URISyntaxException {
 		ProvenanceEntity sourceProvenanceEntity = srcProvenanceMap.get(sourceNetwork.getExternalId());
 		
 		// If the source has no provenance history, we create a minimal
@@ -577,7 +582,7 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 		// Create the history
 		ProvenanceEntity copyProv = ProvenanceHelpers.createProvenanceHistory(
 				copiedNetwork,
-				copiedNetwork.getURI(),
+				"http://" + target.getHostName() + "/",
 				SNYC_COPY, 
 				new Timestamp(Calendar.getInstance().getTimeInMillis()),
 				sourceProvenanceEntity
@@ -590,7 +595,7 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 		if (null != sourceNetwork.getDescription()){
 			PropertyHelpers.addProperty("dc:description", sourceNetwork.getName(), copyProv.getProperties());
 		}
-		PropertyHelpers.addProperty("pav:retrievedFrom", sourceNetwork.getURI(), copyProv.getProperties());
+		PropertyHelpers.addProperty("pav:retrievedFrom", sourceNetwork.getExternalId().toString(), copyProv.getProperties());
 		return copyProv;
 	}
 
