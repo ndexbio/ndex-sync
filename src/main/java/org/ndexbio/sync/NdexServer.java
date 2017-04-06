@@ -38,6 +38,7 @@ import java.util.UUID;
 
 import org.ndexbio.model.exceptions.NdexException;
 import org.ndexbio.model.object.ProvenanceEntity;
+import org.ndexbio.model.object.network.NetworkSummary;
 import org.ndexbio.rest.client.NdexRestClient;
 import org.ndexbio.rest.client.NdexRestClientModelAccessLayer;
 
@@ -117,30 +118,31 @@ public class NdexServer {
 	}
 	
 	public boolean finishedLoading(UUID networkId) throws JsonProcessingException, IOException, NdexException {
-		Map<String, Object> summaryMap = getNetworkSummaryAsMap(networkId);	
-		Boolean b = (Boolean)summaryMap.get("isValid");
-		return b.booleanValue();
+		NetworkSummary s = ndex.getNetworkSummaryById(networkId.toString());
+		return s.getIsValid();
 	}
 
 	public boolean isReadOnly(UUID networkId) throws JsonProcessingException, IOException, NdexException {
-		Map<String, Object> summaryMap = getNetworkSummaryAsMap(networkId);	
+		NetworkSummary s = ndex.getNetworkSummaryById(networkId.toString());
+        return s.getIsReadOnly();
+	/*	Map<String, Object> summaryMap = getNetworkSummaryAsMap(networkId);	
 		Boolean b = (Boolean)summaryMap.get("isReadOnly");
-		return b.booleanValue();
+		return b.booleanValue(); */
 	}
 	
-	private Map<String,Object> getNetworkSummaryAsMap(UUID networkId) throws JsonProcessingException, IOException, NdexException {
+/*	private Map<String,Object> getNetworkSummaryAsMap(UUID networkId) throws JsonProcessingException, IOException, NdexException {
 		if (! version.equals("2.0"))
 			throw new NdexException("This function only support NDEx 2.0 server.");
-		Object o =client.getNdexObject("/network", "/"+networkId.toString(), Object.class);
+		Object o =client.getNdexObject("/network", "/"+networkId.toString() + "/summary", Object.class);
 		if ( o == null || !(o instanceof Map)) 
 			throw new NdexException ("Can't get summary of network " + networkId + " on server " + route);
 		Map<String,Object> result = (Map<String,Object>)o;
 		if ( result.get("errorMessage") !=null )
 			throw new NdexException ("Target NDEx server failed to validate network " + networkId);
 		return result;
-	}
+	} */
 
-	public void setNetworkProvenance(UUID networkId, ProvenanceEntity newProvananceHistory) throws InterruptedException, NdexException {
+	public void setNetworkProvenance(UUID networkId, ProvenanceEntity newProvananceHistory) throws IllegalStateException, Exception {
 		int counter = 0;
 		while (counter < 30) {
 			try {
@@ -148,6 +150,7 @@ public class NdexServer {
 				return ;
 			} catch (IOException e) {
 				System.out.println("Failed to set provenance: " + e.getMessage() + ". Retry in 3 seconds...");
+				e.printStackTrace();
 				Thread.sleep(3000);
 				counter ++;
 			}	

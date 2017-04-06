@@ -45,10 +45,9 @@ import java.util.logging.Logger;
 
 import org.ndexbio.model.exceptions.NdexException;
 import org.ndexbio.model.object.NdexProvenanceEventType;
-import org.ndexbio.model.object.Permissions;
 import org.ndexbio.model.object.ProvenanceEntity;
 import org.ndexbio.model.object.ProvenanceEvent;
-import org.ndexbio.model.object.network.Network;
+import org.ndexbio.model.object.SimplePropertyValuePair;
 import org.ndexbio.model.object.network.NetworkSummary;
 import org.ndexbio.model.tools.PropertyHelpers;
 import org.ndexbio.model.tools.ProvenanceHelpers;
@@ -111,8 +110,8 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 	//        the account is always the target user account.
 	//        the number of networks queried is limited to 100
 	//
-	private void findTargetCandidates() throws JsonProcessingException, IOException {
-		targetCandidates = target.getNdex().findNetworks("", true, target.getUsername(), null, false, 0, 10000);
+	private void findTargetCandidates() throws JsonProcessingException, IOException, NdexException {
+		targetCandidates = target.getNdex().findNetworks("",  target.getUsername(), null, false, 0, 10000).getNetworks();
 		LOGGER.info("Found " + targetCandidates.size() + " networks in target NDEx under  " + target.getUsername());
 	}
 
@@ -208,14 +207,14 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 			
 			
 			// COPY was the latest (most recent) event for the current target;  let's get UUID of the parent network
-				
-			if ((targetRootProvenanceEntity.getProperties() != null) && (targetRootProvenanceEntity.getProperties().size() >= 3) ) {
-				parentEntityUri = targetRootProvenanceEntity.getProperties().get(2).getValue();  // get URI or UUID of parent network
+			parentEntityUri = getCopySourceUUID(targetRootProvenanceEntity.getProperties() );
+			if (parentEntityUri !=null ) {
+				//parentEntityUri = targetRootProvenanceEntity.getProperties().get(2).getValue();  // get URI or UUID of parent network
 	
-				if (parentEntityUri == null) {
+		/*		if (parentEntityUri == null) {
 					LOGGER.info("UUID of the parent network from provenance of target network is null");		
 					continue; 
-				}
+				} */
 					
 				try {
 					//extract UUID from URI
@@ -299,7 +298,7 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
                 // let's check if the target network is read-only, and if yes, check the value of updateReadOnlyNetwork 
                 // configuration parameter.  To check if target is read-only, if (targetCandidate.getReadOnlyCommitId() > 0).
                     
-    	    	if ((targetCandidate.getReadOnlyCommitId() > 0) && (false == updateReadOnlyNetwork)) {
+    	    	if (targetCandidate.getIsReadOnly() && (false == updateReadOnlyNetwork)) {
     	     	    // the target is read-only and updateReadOnlyNetwork config parameter is false, don't update target
     				LOGGER.info("Target network " + targetCandidate.getExternalId() + " is read-only and updateReadOnlyNetwork is false. Not updating target.");
                     	
@@ -645,6 +644,17 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 	
 	public void setUpdateReadOnlyNetwork(boolean updateReadOnlyNetwork) {
 		this.updateReadOnlyNetwork = updateReadOnlyNetwork;
+	}
+	
+	private static String getCopySourceUUID(List<SimplePropertyValuePair> properties) {
+		if (properties == null)
+			return null;
+		for (SimplePropertyValuePair p : properties) {
+			if ( p.getName().equals("pav:retrievedFrom"))
+				return p.getValue();
+		}
+					
+		return null;
 	}
 
 }

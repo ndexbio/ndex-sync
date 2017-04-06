@@ -32,6 +32,7 @@ package org.ndexbio.sync;
 
 import java.io.IOException;
 
+import org.ndexbio.model.exceptions.NdexException;
 import org.ndexbio.model.object.Permissions;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
@@ -52,14 +53,14 @@ public class QueryCopyPlan extends CopyPlan {
 
 
 	@Override
-	public void findSourceNetworks(){
+	public void findSourceNetworks() throws NdexException{
 		System.out.println("finding up to " + queryLimit 
 				+ " source networks by query '" + queryString + "' with accountName " + queryAccountName);
 		try {
 		//	Permissions permissions = Permissions.WRITE;
 	//		if( queryAccountName != null )
 	//			permissions = null;
-			sourceNetworks = this.source.ndex.findNetworks(queryString, true, queryAccountName, null, false, 0, queryLimit);
+			sourceNetworks = this.source.ndex.findNetworks(queryString, queryAccountName, null, false, 0, queryLimit).getNetworks();
 			LOGGER.info("Found " + sourceNetworks.size() + " networks");
 		} catch (IOException e) {
 			LOGGER.severe("Error while finding source networks: " + e.getMessage());
