@@ -33,7 +33,6 @@ package org.ndexbio.sync;
 import java.io.IOException;
 
 import org.ndexbio.model.exceptions.NdexException;
-import org.ndexbio.model.object.Permissions;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 

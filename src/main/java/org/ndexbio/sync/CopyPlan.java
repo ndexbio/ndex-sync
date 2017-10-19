@@ -81,8 +81,8 @@ public abstract class CopyPlan implements NdexProvenanceEventType {
 	public void process() throws JsonProcessingException, IOException, NdexException {
 		source.initialize();
 		target.initialize();
-		if ( !target.getVersion().equals("2.0"))
-			throw new NdexException ("This version only supports NDEx version 2.0 server as the target.");
+		if ( !target.getVersion().substring(0,2).equals("2."))
+			throw new NdexException ("This version only supports NDEx version 2.x server as the target.");
 		srcProvenanceMap = new HashMap<>();
 		tgtProvenanceMap = new HashMap<> ();
 		findSourceNetworks();
